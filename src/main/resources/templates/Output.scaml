@@ -1,0 +1,22 @@
+!!! XML
+!!!
+%html
+  %head
+    %title VHDL NameChecker result
+  %body
+    -@ import val result: at.jku.ssw.openvc.VHDLNameChecker.CheckResult
+    -@ import val sourceLines: IndexedSeq[String]
+    #section
+      %h2 VHDL NameChecker result
+      %p The following document contains the results of VHDL NameChecker
+    #section
+      %h2 Summary
+      %table
+        %tr
+          %th Files
+          %th Errors
+    - for (msg <- checkErrors)
+      %p= sourceLines(msg.position.line - 1).toLowerCase
+      %p= (" " * msg.position.charPosition) + "^"
+      %p= sourceFile + ": line:" + msg.position.line + " col:" + msg.position.charPosition + " " + msg.message
+

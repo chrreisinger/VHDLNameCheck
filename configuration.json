@@ -1,0 +1,30 @@
+{
+  //C-style line comments in JSON.
+  "NameChecker": {
+         //"PackageBodyDeclaration" :
+         //"PackageDeclaration" :
+         //"EntityDeclaration" :
+         //"ArchitectureDeclaration" :
+         //"ConfigurationDeclaration" :
+         //"VariableDeclaration" :
+         //"ConstantDeclaration" :
+         //"SignalDeclaration" :
+         //"FileDeclaration" :
+         //"AbstractTypeDeclaration" :
+         //"FunctionDefinition" :
+         //"ProcedureDefinition" :
+         //"ComponentDeclaration" :
+         //"FunctionDeclaration" :
+         //"ProcedureDeclaration" :
+         //"SubTypeDeclaration" :
+         //"AttributeDeclaration" :
+         //"AttributeSpecification" :
+         //"AliasDeclaration" :
+         //"GroupDeclaration" :
+         //"GroupTemplateDeclaration" :
+         //"InterfaceVariableDeclaration" :
+         //"InterfaceSignalDeclaration" :
+         //"InterfaceFileDeclaration" :
+         //"InterfaceConstantDeclaration" :
+  }
+}
