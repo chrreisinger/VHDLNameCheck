@@ -206,7 +206,7 @@ PRODUCTIONS
 
 VHDL
 =
-  "Coco/R" "Development" "Tools"        (. System.out.println(t.val). .)
+  "Coco/R" "Development" "Tools"        (. System.out.println(t.val); .)
 .
 
 design_file<out DesignFile designFile> =	
@@ -219,13 +219,13 @@ design_unit<out DesignUnit designUnit> =
 (.
 	ListBuffer<Identifier> libraries=new Buffer<Identifier>();
 	ListBuffer<UseClause> useClauses=new Buffer<UseClause>();
-	//val firstToken=input.LT(1)
+	//val firstToken=la
 .)
 		{
 		library_clause<out identifierList> (.libraries.appendAll(identifierList);.)
 		|use_clause<out useClause> (.useClauses.append(useClause);.)
 		} library_unit<out libraryUnit>
-		(.designUnit=new DesignUnit(toPosition(firstToken),libraries.toList(),useClauses.toList(),libraryUnit).)
+		(.designUnit=new DesignUnit(toPosition(firstToken),libraries.toList(),useClauses.toList(),libraryUnit);.)
 		.
 
 library_unit<out LibraryUnit libraryUnit> =
@@ -238,7 +238,7 @@ library_unit<out LibraryUnit libraryUnit> =
 		
 library_clause<out Seq<Identifier> identifierList> =
 	(. identifierList=Seq(); .)
-	LIBRARY identifier_list<out list> SEMICOLON (. identifierList=list .)
+	LIBRARY identifier_list<out list> SEMICOLON (. identifierList=list; .)
 	.
 
 generic_clause<out InterfaceList list> =
@@ -249,7 +249,7 @@ generic_clause<out InterfaceList list> =
 generic_interface_list<out InterfaceList list> =
 	(. ListBuffer<InterfaceList.InterfaceConstantDeclaration> elements=new ListBuffer<InterfaceList.InterfaceConstantDeclaration>(); .)
     interface_constant_declaration<out decl> (.elements.append(decl);.) { SEMICOLON interface_constant_declaration<out decl> (.elements.append(decl); .)}
-    (. list=new InterfaceList(elements.toList()).)
+    (. list=new InterfaceList(elements.toList());.)
     	.
     
 port_clause<out InterfaceList list> =
@@ -417,14 +417,14 @@ designator<out Identifier id> =
 	  
 subprogram_specification<out SubProgramDeclaration decl> =
 			PROCEDURE designator<out designator> [LPAREN parameter_interface_list_procedure<out list> RPAREN] 
-			(.decl=new ProcedureDeclaration(toPosition($PROCEDURE),designator,list).)
+			(.decl=new ProcedureDeclaration(toPosition($PROCEDURE),designator,list);.)
 			| [PURE | IMPURE] FUNCTION designator<out designator> [LPAREN parameter_interface_list_function<out list> RPAREN] RETURN type_mark<out returnType> //TODO save impure
 			(.decl=new FunctionDeclaration(toPosition($FUNCTION),i==null,designator,list,returnType);.)
 			.	
 
 subprogram_declartion_or_body<out DeclarativeItem declOrBody> =
 		subprogram_specification<out decl> [subprogram_body<out subProgramDef,decl>] SEMICOLON
-		(. declOrBody=if (subProgramDef!=null) subProgramDef else decl;.)	
+		(. if (subProgramDef!=null) declOrBody=subProgramDef; else declOrBody=decl;.)	
 		.
 		
 subprogram_declaration<out DeclarativeItem subprogramDecl> =
@@ -438,13 +438,14 @@ subprogram_body<out SubProgramDefinition subProgramDef,SubProgramDeclaration sub
 		BEGIN
 			sequential_statement_list<out sequentialStatements>
 		END_TOKEN [PROCEDURE | FUNCTION] [designator<out endDesignator>]
-		(.
-			$subProgramDef = $subprogramDecl match {
-				case procDecl : ProcedureDeclaration => 
-					new ProcedureDefinition($subprogramDecl.position,procDecl.identifier,procDecl.parameterInterfaceList,declItems.toList(),sequentialStatements,endIdent)
-				case funcDecl : FunctionDeclaration =>
-					new FunctionDefinition($subprogramDecl.position,funcDecl.pure,funcDecl.identifier,funcDecl.parameterInterfaceList,funcDecl.returnType,declItems.toList(),sequentialStatements,endIdent)
-			}	
+		(.			
+			if (subprogramDecl instanceof ProcedureDeclaration){
+				ProcedureDeclaration procDecl = (ProcedureDeclaration)subprogramDecl;
+				subProgramDef=new ProcedureDefinition(subprogramDecl.position,procDecl.identifier,procDecl.parameterInterfaceList,declItems.toList(),sequentialStatements,endIdent);
+			}else {
+				FunctionDeclaration funcDecl=(FunctionDeclaration)subprogramDecl;
+				subProgramDef=new FunctionDefinition(subprogramDecl.position,funcDecl.pure,funcDecl.identifier,funcDecl.parameterInterfaceList,funcDecl.returnType,declItems.toList(),sequentialStatements,endIdent);
+			}
 		.)
 		.
 		
@@ -465,16 +466,16 @@ subprogram_declarative_item<out DeclarativeItem node> =
 
 type_declaration<out AbstractTypeDeclaration typeDecl> =
 		TYPE identifier<out id> (
-		IS type_definition<out typeDef,id,toPosition($TYPE)> SEMICOLON (.typeDecl=typeDef.)
-		| SEMICOLON (.typeDecl=new IncompleteTypeDeclaration(toPosition($TYPE),id).) 
+		IS type_definition<out typeDef,id,toPosition($TYPE)> SEMICOLON (.typeDecl=typeDef;.)
+		| SEMICOLON (.typeDecl=new IncompleteTypeDeclaration(toPosition($TYPE),id);.) 
 		)
 		.
 
 type_definition<out AbstractTypeDeclaration typeDef,Identifier id,Position pos> =
-		enumeration_type_definition<out enumTypeDef,id,pos> (.typeDef=enumTypeDef .)
+		enumeration_type_definition<out enumTypeDef,id,pos> (.typeDef=enumTypeDef; .)
 		//TODO | (RANGE range UNITS) => physical_type_definition<id,pos> (.typeDef=physicalTypeDef.)
-		| integer_or_floating_point_type_definition<out intOrFloat,id,pos> (.typeDef=intOrFloat.)
-		| array_type_definition<out arrayTypeDef,id,pos> (.typeDef=arrayTypeDef.)
+		| integer_or_floating_point_type_definition<out intOrFloat,id,pos> (.typeDef=intOrFloat;.)
+		| array_type_definition<out arrayTypeDef,id,pos> (.typeDef=arrayTypeDef;.)
 		| record_type_definition<out recordTypeDef,id,pos> (.typeDef=recordTypeDef;.)
 		| access_type_definition<out accessTypeDef,id,pos> (.typeDef=accessTypeDef;.)
 		| file_type_definition<out fileTypeDef,id,pos> (.typeDef=fileTypeDef;.)
@@ -491,10 +492,10 @@ constant_declaration <out ConstantDeclaration constantDecl> =
 signal_declaration<out SignalDeclaration signalDecl> =
 		SIGNAL identifier_list<out list> COLON subtype_indication<out subType> [REGISTER|BUS] [VAR_ASSIGN expression<out expr>] SEMICOLON
 		(.
-			val signalType=
-				if(reg!=null) Some(SignalDeclaration.Type.REGISTER)
-				else if (bus!=null) Some(SignalDeclaration.Type.BUS)
-				else None
+			Option<SignalDeclaration.Type> signalType=null;
+				if(reg!=null) signalType=new Some(SignalDeclaration.Type.REGISTER);
+				else if (bus!=null) signalType=new Some(SignalDeclaration.Type.BUS);
+				else signalType=None;
 			signalDecl=new SignalDeclaration(toPosition($SIGNAL),list,subType,signalType,expr);
 		.)
 		.
@@ -539,19 +540,19 @@ attribute_specification<out AttributeSpecification node> =
 		.
 		
 entity_designator<out Tuple2<Identifier,Option<Signature>> designator> =
-		(. Identifier id=null .)
+		(. Identifier id=null; .)
 		(identifier<out identifier> (.id=identifier;.)
 		|CHARACTER_LITERAL(.id=toIdentifier($CHARACTER_LITERAL);.)
 		|STRING_LITERAL(.id=toIdentifier($STRING_LITERAL);.)
 		) [signature<out sig>]
-		(.designator=(id,Option($signature.signature_)); .)
+		(.designator=new Tuple2<Identifier,Option<Signature>>(id,new Option<Signature>(sig)); .)
 		.
 	
 entity_name_list<out Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier> list> =
-		(. elements=new ListBuffer<Tuple2[Identifier,Option[Signature]]>() .)
+		(. elements=new ListBuffer<Tuple2<Identifier,Option<Signature>>>(); .)
 		entity_designator<out designator> (.elements.append(designator); .) {COMMA entity_designator<out designator> (.elements.append(designator);.)} (.list=Left(elements.toList());.)
-		| OTHERS (.$list=Right(toIdentifier($OTHERS));.)
-		| ALL (.$list=Right(toIdentifier($ALL));.)
+		| OTHERS (.list=new Right<Identifier>(toIdentifier($OTHERS));.)
+		| ALL (.list=new Right<Identifier>(toIdentifier($ALL));.)
 		.
 
 entity_class<out EntityClass.Value entityClass> =
@@ -604,10 +605,7 @@ binding_indication<out Object indication> =
 
 disconnection_specification<out DisconnectionSpecification disconnectSpec> =
 		DISCONNECT (selected_name_list<out list> | OTHERS | ALL) COLON type_mark<out type> AFTER expression<out expr> SEMICOLON
-		(.
-			val signal_list = if (id==null) Left(list) else Right(toIdentifier(id))
-			disconnectSpec= new DisconnectionSpecification(toPosition($DISCONNECT),signal_list,type,expr);
-		.)
+		(.disconnectSpec= new DisconnectionSpecification(toPosition($DISCONNECT),id==null?new Left(list):new Right(toIdentifier(id)),type,expr);.)
 		.
 
 entity_class_entry<out GroupTemplateDeclaration.Element entry> =
@@ -633,7 +631,7 @@ group_constituent<out Either<Name,Identifier> constituent> =
     .
 
 group_constituent_list<out Seq<Either<Name,Identifier>> list> =
-		(. ListBuffer<Either<Name,Identifier>>() elements=new ListBuffer<Either<Name,Identifier>>(); .)
+		(. ListBuffer<Either<Name,Identifier>> elements=new ListBuffer<Either<Name,Identifier>>(); .)
        group_constituent<out c1> (.elements.append(c1); .) {COMMA group_constituent<out c2> (.elements.append(c2);.)}
        (.list=elements.toList();.)
     	.
@@ -660,7 +658,7 @@ integer_or_floating_point_type_definition<out IntegerOrFloatingPointTypeDefiniti
 		.
 			
 physical_type_definition<out PhysicalTypeDefinition physicalTypeDef, Identifier id,Position pos> =
-		(. ListBuffer<PhysicalTypeDefinition.Element> elements=new ListBuffer<PhysicalTypeDefinition.Element>() .)
+		(. ListBuffer<PhysicalTypeDefinition.Element> elements=new ListBuffer<PhysicalTypeDefinition.Element>(); .)
 		RANGE range<out range>
 		UNITS
 			identifier<out baseIdentifier> SEMICOLON
@@ -677,14 +675,14 @@ index_subtype_definition<out SelectedName typeMark> =
 		.
 				
 array_type_definition<out AbstractArrayTypeDefinition arrayTypeDef,Identifier id,Position pos> = 
-		(. ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>() .)
+		(. ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>(); .)
 		ARRAY (
 		//TODO (LPAREN index_subtype_definition)=>LPAREN type1=index_subtype_definition {unConstraintList += $type1.typeMark} (COMMA type2=index_subtype_definition {unConstraintList += $type2.typeMark})* RPAREN OF subType=subtype_indication
 		//| index_constraint OF subType=subtype_indication
 		)
 		(.
-			if (unConstraintList.isEmpty) $arrayTypeDef=new ConstrainedArrayTypeDefinition($pos,$id,$index_constraint.ranges,$subType.subType)
-			else $arrayTypeDef=new UnconstrainedArrayTypeDefinition($pos,$id,unConstraintList.toList(),$subType.subType)
+			if (unConstraintList.isEmpty) arrayTypeDef=new ConstrainedArrayTypeDefinition($pos,$id,$index_constraint.ranges,$subType.subType);
+			else arrayTypeDef=new UnconstrainedArrayTypeDefinition($pos,$id,unConstraintList.toList(),$subType.subType);
 		.)
 		.
 		
@@ -754,8 +752,8 @@ subtype_declaration<out SubTypeDeclaration subTypeDecl> =
 subtype_indication<out SubTypeIndication subType> =
 		selected_name<out n1> [selected_name<out n2>] [constraint<out constraint>]
 		(.
-			$subType=if (n2!=null) new SubTypeIndication($n1.name_,$n2.name_,$constraint.constraint_)
-				else new SubTypeIndication(None,$n1.name_,$constraint.constraint_)
+			if (n2!=null) subType=new SubTypeIndication(n1,n2,constraint);
+			else subType=new SubTypeIndication(None,n1,constraint);
 		.)
 		.
   
@@ -871,7 +869,7 @@ block_declarative_item <out DeclarativeItem node> =
 		.
 		
 process_statement<out ProcessStatement processStmt,Identifier label,Boolean postponed> =
-		(. ListBuffer<DeclarativeItem>() declItem=new ListBuffer<DeclarativeItem>(); .)
+		(. ListBuffer<DeclarativeItem> declItem=new ListBuffer<DeclarativeItem>(); .)
 		PROCESS [LPAREN name_list<out name_list> RPAREN] [IS]
 			{process_declarative_item<out item> (.declItem.append(item);.)}
 		BEGIN
@@ -920,7 +918,7 @@ conditional_signal_assignment<out ConcurrentConditionalSignalAssignment signalAs
 
 //TODO 
 conditional_waveforms<ListBuffer elements> =
-       waveform<out waveform> [ WHEN condition<out expr> [ ELSE conditional_waveforms<elements> ] ] (.new ConcurrentConditionalSignalAssignment.When(waveform,expr) +=: elements;.)
+       waveform<out waveform> [ WHEN condition<out expr> [ ELSE conditional_waveforms<elements> ] ] (.elements.prepend(new ConcurrentConditionalSignalAssignment.When(waveform,expr));.)
        .
  
 selected_waveform<out ConcurrentSelectedSignalAssignment.When whenClause> =
@@ -928,7 +926,7 @@ selected_waveform<out ConcurrentSelectedSignalAssignment.When whenClause> =
  		.  
  		
 selected_signal_assignment<out ConcurrentSelectedSignalAssignment signalAssignment,Identifier label,Boolean postponed> =
-		(. ListBuffer<ConcurrentSelectedSignalAssignment.When>() elements=new ListBuffer<ConcurrentSelectedSignalAssignment.When>(); .)
+		(. ListBuffer<ConcurrentSelectedSignalAssignment.When> elements=new ListBuffer<ConcurrentSelectedSignalAssignment.When>(); .)
 		WITH expression<out expr> SELECT
 			target<out target> LEQ [GUARDED] [delay_mechanism<out delay>] 
 			selected_waveform<out s1> (.elements.append(s1);.){COMMA selected_waveform<out s2>(.elements.append(s2);.)} SEMICOLON
@@ -942,8 +940,8 @@ target<out Target target> =
   		
 component_instantiation_statement<out ComponentInstantiationStatement stmt, Identifier label> =
 (.
-	var componentType:ComponentInstantiationStatement.ComponentType.Value=null
-	val firstToken=input.LT(1)
+	ComponentInstantiationStatement.ComponentType.Value componentType =null;
+	Token firstToken=la;
 .)
 		/*( COMPONENT? n=selected_name {componentType=ComponentInstantiationStatement.ComponentType.COMPONENT }
 		  | ENTITY n=selected_name (LPAREN architecture_identifier=identifier RPAREN)? {componentType=ComponentInstantiationStatement.ComponentType.ENTITY}
@@ -955,8 +953,8 @@ component_instantiation_statement<out ComponentInstantiationStatement stmt, Iden
 		.
 		
 generate_statement<out ConcurrentStatement generateStmt, Identifier label> =
-		for_generate_statement<out forGenerateStmt, label> (. generateStmt=forGenerateStmt.)
-		| if_generate_statement<out ifGenerateStmt, label> (. generateStmt=ifGenerateStmt.)
+		for_generate_statement<out forGenerateStmt, label> (.generateStmt=forGenerateStmt;.)
+		| if_generate_statement<out ifGenerateStmt, label> (.generateStmt=ifGenerateStmt;.)
 		.
 	
 for_generate_statement<out ForGenerateStatement forGenerateStmt, Identifier label> =
@@ -975,23 +973,20 @@ if_generate_statement<out IfGenerateStatement ifGenerateStmt, Identifier label> 
 		
 generate_statement_body<out Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>> statementList> =
 (.
-	ListBuffer<DeclarativeItem>() tmpBockItems=new ListBuffer<DeclarativeItem>();
-	$blockItems=List()
-	$statementList=List()
+	ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
 .)
-		[{block_declarative_item<out item>(.tmpBockItems.append(item);.)} 
+		[{block_declarative_item<out item>(.declarativeItems.append(item);.)} 
 	    BEGIN]
 	   	architecture_statement_list<out statementList>
 	   	(.
-	   		$blockItems=tmpBockItems.toList()
-			$statementList=$architecture_statement_list.list
+	   		statementList=new Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>(declarativeItems,statementList);
 	   	.)
 	   	.
 
 sequential_statement_list<out Seq<SequentialStatement> list> =
 (.
 	ListBuffer<SequentialStatement> tmpList=new ListBuffer<SequentialStatement>();
-	list=List()
+	list=List();
 .)
 		{sequential_statement<out stmt>(.tmpList.append(stmt);.)}
 		(.list=tmpList.toList();.)
@@ -1050,7 +1045,7 @@ waveform_element<out Waveform.Element element> =
  	.
 	
 waveform<out Waveform waveForm> =
-		(.ListBuffer<Waveform.Element> elements=new ListBuffer<Waveform.Element>().)
+		(.ListBuffer<Waveform.Element> elements=new ListBuffer<Waveform.Element>();.)
 		waveform_element<out e1>(.elements.append(e1);.) {COMMA waveform_element<out e2>(.elements.append(e2);.)}
 		| UNAFFECTED 
 		(.waveForm=new Waveform(toPosition(firstToken),elements.toList());.)
@@ -1094,24 +1089,22 @@ iteration_scheme<out Either<Expression,Tuple2<Identifier,DiscreteRange>> scheme>
 		.	
 			
 loop_statement<out SequentialStatement loopStmt, Identifier label> =
+		(. Token firstToken=la;.)
 		[iteration_scheme<out stmtType>] LOOP
 			sequential_statement_list<out sequentialStatements>
 		END_TOKEN LOOP [identifier<out end_loop_label>] SEMICOLON
 		(.		
-			val position=toPosition(firstToken)
-			loopStmt=Option(stmtType) match {
-				case Some(x)=> x match {
-					case Left(condition)=>new WhileStatement(position,$label,condition,sequentialStatements,$end_loop_label.id)
-					case Right((identifier,discreteRange)) =>new ForStatement(position,$label,identifier,discreteRange,sequentialStatements,$end_loop_label.id)
-				}
-				case None =>new LoopStatement(position,$label,sequentialStatements,$end_loop_label.id)
-			}
+			Position position=toPosition(firstToken);
+			if (stmtType!=null){
+				if (stmtType instanceof Left) loopStmt=new WhileStatement(position,label,((Left)stmtType).a,sequentialStatements,end_loop_label);
+				//TODO case Right((identifier,discreteRange)) =>new ForStatement(position,label,identifier,discreteRange,sequentialStatements,end_loop_label.id);
+			}else loopStmt=new LoopStatement(position,label,sequentialStatements,end_loop_label.id);
 		.)
 		.
 
 next_statement<out NextStatement nextStmt,Identifier label> =
 		NEXT [identifier<out identifier>] [WHEN condition<out expr>] SEMICOLON 
-		(.$nextStmt=new NextStatement(toPosition($NEXT),label,identifier,expr);.)
+		(.nextStmt=new NextStatement(toPosition($NEXT),label,identifier,expr);.)
 		.
 
 exit_statement<out ExitStatement exitStmt, Identifier label> =
@@ -1126,7 +1119,7 @@ return_statement<out ReturnStatement returnStmt, Identifier label> =
 	
 null_statement<out NullStatement nullStmt, Identifier label> =
 		NULL SEMICOLON
-		(.nullStmt=new NullStatement(toPosition($NULL),label).)
+		(.nullStmt=new NullStatement(toPosition($NULL),label);.)
 		.
 		
 interface_element_procedure<out InterfaceList.AbstractInterfaceElement element> =
@@ -1219,7 +1212,7 @@ expression<out Expression expr> =
 	   .
 
 logical_operator<out Tuple2<LogicalExpression.Operator.Value,Position> op> =
-		(.$pos=toPosition(input.LT(1)).)
+		(.Position pos=toPosition(la);.)
 		AND (.logOp=LogicalExpression.Operator.AND;.)
 		|OR (.logOp=LogicalExpression.Operator.OR;.)
 		|XOR (.logOp=LogicalExpression.Operator.XOR;.)
@@ -1234,7 +1227,8 @@ relation<out Expression rel> =
 
 relational_operator<out Tuple2<Relation.Operator.Value,Position> op> =
 (.
-	$pos=toPosition(input.LT(1))
+	Position pos=toPosition(la);
+	Relation.Operator.Value relOp=null;
 .)
 	    EQ (.relOp=Relation.Operator.EQ;.)
 	  | NEQ (.relOp=Relation.Operator.NEQ;.)
@@ -1242,6 +1236,7 @@ relational_operator<out Tuple2<Relation.Operator.Value,Position> op> =
 	  | LEQ (.relOp=Relation.Operator.LEQ;.)
 	  | GT (.relOp=Relation.Operator.GT;.)
 	  | GEQ (.relOp=Relation.Operator.GEQ;.)
+	  (.op=new Tuple2<Relation.Operator.Value,Position>(relOp,pos);.)
 	  .
 
 	
@@ -1251,8 +1246,8 @@ shift_expression<out Expression shiftExpr> =
     .
 
 shift_operator<out Tuple2<ShiftExpression.Operator.Value,Position> op> =
-(.  ShiftExpression.Operator.Value shiftOp
-	$pos=toPosition(input.LT(1))
+(.  ShiftExpression.Operator.Value shiftOp=null;
+	Position pos=toPosition(la);
 .)
 		SLL  (.shiftOp=ShiftExpression.Operator.SLL;.)
 		|SRL (.shiftOp=ShiftExpression.Operator.SRL;.)
@@ -1260,33 +1255,43 @@ shift_operator<out Tuple2<ShiftExpression.Operator.Value,Position> op> =
 		|SRA (.shiftOp=ShiftExpression.Operator.SRA;.)
 		|ROL (.shiftOp=ShiftExpression.Operator.ROL;.)
 		|ROR (.shiftOp=ShiftExpression.Operator.ROR;.)
+		(.op=new Tuple2<ShiftExpression.Operator.Value,Position>(shiftOp,pos);.)
 		.
 		
 simple_expression<out Expression simpleExpr> =
 	  [sign<out sign>] term<out t1> 
-	  (.simpleExpr=if (s!=null) new SimpleExpression($s.pos,$s.signOp,$t1.term_,None,None) else $t1.term_.)
+	  (.if (s!=null) simpleExpr=new SimpleExpression(s._2,s._1,t1,None,None); else simpleExpr=t1;.)
 	  {adding_operator<out op> term<out t2> (.simpleExpr=new SimpleExpression($op.pos,None,$simpleExpr,$op.addOp,t2);.)}
 	  .
 
 sign<out Tuple2<SimpleExpression.SignOperator.Value,Position> op> =
-(. $pos=toPosition(input.LT(1)); .)
+(.  SimpleExpression.SignOperator.Value signOp=null;
+	Position pos=toPosition(la);
+.)
 		PLUS (.signOp=SimpleExpression.SignOperator.PLUS;.)
 		|MINUS (.signOp=SimpleExpression.SignOperator.MINUS;.)
+		(.op=new Tuple2<SimpleExpression.SignOperator.Value,Position>(signOp,pos);.)
 		.	
 		
 adding_operator<out Tuple2<SimpleExpression.AddOperator.Value,Position> op> =
-(.$pos=toPosition(input.LT(1)); .)
+(.  SimpleExpression.AddOperator.Value addOp=null;
+	Position pos=toPosition(la);
+.)
 		PLUS (.addOp=SimpleExpression.AddOperator.PLUS;.)
 		|MINUS (.addOp=SimpleExpression.AddOperator.MINUS;.)
 		|AMPERSAND (.addOp=SimpleExpression.AddOperator.AMPERSAND;.)
+		(.op=new Tuple2<SimpleExpression.AddOperator.Value,Position>(addOp,pos);.)
 		.
 
 multiplying_operator<out Tuple2<Term.Operator.Value,Position> op>=
-(.$pos=toPosition(input.LT(1));.)
+(.  Term.Operator.Value mulOp=null;
+	Position pos=toPosition(la);
+.)
 		MUL (.mulOp=Term.Operator.MUL;.)
 		|DIV (.mulOp=Term.Operator.DIV;.)
 		|MOD (.mulOp=Term.Operator.MOD;.)
 		|REM (.mulOp=Term.Operator.REM;.)
+		(.op=new Tuple2<SimpleExpression.AddOperator.Value,Position>(mulOp,pos);.)
 		.
 
 term<out Expression term> =
@@ -1315,7 +1320,7 @@ primary<out Expression p> =
 allocator<out Expression newExpression> =
 	NEW selected_name<out selectedName>  
 	 	( qualified_expression<out expr,selectedName> (.newExpression=new NewExpression(toPosition($NEW),Left(expr));.)
-	 	| [index_constraint<out constraint>] (.newExpression=new NewExpression(toPosition($NEW),Right(new SubTypeIndication(None,$selected_name.name_,Right(ranges)))).)
+	 	| [index_constraint<out constraint>] (.newExpression=new NewExpression(toPosition($NEW),Right(new SubTypeIndication(None,$selected_name.name_,Right(ranges))));.)
 	 	)
 	 	.
 
@@ -1332,22 +1337,22 @@ qualified_expression<out QualifiedExpression expr,SelectedName typeName> =
 selected_name_list<out Seq<SelectedName> list> =
 (.
 	ListBuffer<SelectedName> tmpList=new ListBuffer<SelectedName>();
-	list=List()
+	list=List();
 .)
 		selected_name<out n1> (.tmpList.append(n1);.) {COMMA selected_name<out n2> (.tmpList.append(n2);.) }
-		(.$list=tmpList.toList();.)
+		(.list=tmpList.toList();.)
 		.
 		
 selected_name<out SelectedName name> =
 		(. ListBuffer<Identifier> parts=new ListBuffer<Identifier>();.)
 		name_prefix<out prefix> { name_selected_part<out selectedPart> (.parts.append(selectedPart);.)}
-		(.name =new SelectedName(prefix.id +: parts.toList());.)
+		(.prepend.prepend(prefix); name =new SelectedName(parts.toList());.)
 		.
 
 name_list<out Seq<Name> list> =
 (.
-	val ListBuffer<Name>=new ListBuffer<Name>();
-	list=List()
+	ListBuffer<Name> tmpList=new ListBuffer<Name>();
+	list=List();
 .)
 		name<out n1> (.tmpList.append(n1);.) {COMMA name<out n2> (.tmpList.append(n2);.)}
 		(.list=tmpList.toList();.)
@@ -1385,7 +1390,7 @@ name_slice_part<out Name.SlicePart part> =
 		.
 				
 name_indexed_part<out Name.IndexPart part> =
-(. ListBuffer<Expression>() indexes=new ListBuffer<Expression>(); .)
+(. ListBuffer<Expression> indexes=new ListBuffer<Expression>(); .)
 		 LPAREN expression<out e1> (.indexes.append(e1);.) {COMMA expression<out e2> (.indexes.append(e2);.)} RPAREN (.part=new Name.IndexPart(indexes.toList());.) 
 		 .
 
@@ -1402,7 +1407,7 @@ signature<out Signature signature> =
 literal returns [Expression literal_]
 @init{
 	var literalType:Literal.Type.Value=null
-	val firstToken=input.LT(1)
+	val firstToken=la
 }
 	:	
 		(
@@ -1422,7 +1427,7 @@ physical_literal returns [PhysicalLiteral literal_]
 @init{
 	var text:String=null
 	var literalType:Literal.Type.Value=null
-	val firstToken=input.LT(1)
+	val firstToken=la
 }
 	:	(INTEGER_LITERAL {text=input.LT(-1).getText(); literalType=Literal.Type.INTEGER_LITERAL}
 		|REAL_LITERAL {text=input.LT(-1).getText(); literalType=Literal.Type.REAL_LITERAL}
@@ -1454,7 +1459,7 @@ aggregate<out Aggregate aggregate> =
 /*
 choice	returns [Choices.Choice choice_]
 @init{
-	val firstToken=input.LT(1)
+	val firstToken=la
 }
 	:	
 		(simple_expression direction)=> d=discrete_range {choice_ =new Choices.Choice(toPosition(firstToken),Some(Left($d.discreteRange)))}
@@ -1470,11 +1475,11 @@ choices<out Choices choices> =
 	
 identifier_list<out Seq<Identifier> list> =
 (.
-	ListBuffer<Identifier> tmpList=new ListBuffer>Identifier>();
-	list=List()
+	ListBuffer<Identifier> tmpList=new ListBuffer<Identifier>();
+	list=List();
 .)
 		identifier<out id1> (.tmpList.append(id1);.) {COMMA identifier<out id2> (.tmpList.append(id2);.) } 
-		(.$list=tmpList.toList();.)
+		(.list=tmpList.toList();.)
 		.
 			
 identifier<out Identifier id> =

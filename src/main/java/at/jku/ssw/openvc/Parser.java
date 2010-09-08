@@ -1,9 +1,15 @@
 package at.jku.ssw.openvc;
 
+import at.jku.ssw.openvc.*;
+import at.jku.ssw.openvc.ast.*;
+import at.jku.ssw.openvc.ast.concurrentStatements.*;
+import at.jku.ssw.openvc.ast.declarations.*;
+import at.jku.ssw.openvc.ast.expressions.*;
+import at.jku.ssw.openvc.ast.sequentialStatements.*;
+import at.jku.ssw.openvc.ast.ams.*;
 import scala.Either;
-import scala.None;
-import scala.Option;
 import scala.Tuple2;
+import scala.Option;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
 
@@ -219,7 +225,7 @@ public class Parser {
 		Expect(132);
 		Expect(133);
 		Expect(134);
-		System.out.println(t.val). 
+		System.out.println(t.val); 
 	}
 
 	DesignFile  design_file() {
@@ -237,7 +243,7 @@ public class Parser {
 		DesignUnit  designUnit;
 		ListBuffer<Identifier> libraries=new Buffer<Identifier>();
 		ListBuffer<UseClause> useClauses=new Buffer<UseClause>();
-		//val firstToken=input.LT(1)
+		//val firstToken=la
 		
 		while (la.kind == 48 || la.kind == 98) {
 			if (la.kind == 48) {
@@ -249,7 +255,7 @@ public class Parser {
 			}
 		}
 		libraryUnit = library_unit();
-		designUnit=new DesignUnit(toPosition(firstToken),libraries.toList(),useClauses.toList(),libraryUnit)
+		designUnit=new DesignUnit(toPosition(firstToken),libraries.toList(),useClauses.toList(),libraryUnit);
 		return designUnit;
 	}
 
@@ -259,7 +265,7 @@ public class Parser {
 		Expect(48);
 		list = identifier_list();
 		Expect(115);
-		identifierList=list 
+		identifierList=list; 
 		return identifierList;
 	}
 
@@ -425,8 +431,8 @@ public class Parser {
 
 	Seq<Identifier>  identifier_list() {
 		Seq<Identifier>  list;
-		ListBuffer<Identifier> tmpList=new ListBuffer>Identifier>();
-		list=List()
+		ListBuffer<Identifier> tmpList=new ListBuffer<Identifier>();
+		list=List();
 		
 		id1 = identifier();
 		tmpList.append(id1);
@@ -435,7 +441,7 @@ public class Parser {
 			id2 = identifier();
 			tmpList.append(id2);
 		}
-		=tmpList.toList();
+		list=tmpList.toList();
 		return list;
 	}
 
@@ -460,7 +466,7 @@ public class Parser {
 			decl = interface_constant_declaration();
 			elements.append(decl); 
 		}
-		list=new InterfaceList(elements.toList())
+		list=new InterfaceList(elements.toList());
 		return list;
 	}
 
@@ -597,7 +603,7 @@ public class Parser {
 			subProgramDef = subprogram_body(decl);
 		}
 		Expect(115);
-		declOrBody=if (subProgramDef!=null) subProgramDef else decl;
+		if (subProgramDef!=null) declOrBody=subProgramDef; else declOrBody=decl;
 		return declOrBody;
 	}
 
@@ -609,10 +615,10 @@ public class Parser {
 			Get();
 			typeDef = type_definition(id,toPosition($TYPE));
 			Expect(115);
-			typeDecl=typeDef
+			typeDecl=typeDef;
 		} else if (la.kind == 115) {
 			Get();
-			typeDecl=new IncompleteTypeDeclaration(toPosition($TYPE),id)
+			typeDecl=new IncompleteTypeDeclaration(toPosition($TYPE),id);
 		} else SynErr(142);
 		return typeDecl;
 	}
@@ -661,10 +667,10 @@ public class Parser {
 			expr = expression();
 		}
 		Expect(115);
-		val signalType=
-		if(reg!=null) Some(SignalDeclaration.Type.REGISTER)
-		else if (bus!=null) Some(SignalDeclaration.Type.BUS)
-		else None
+		Option<SignalDeclaration.Type> signalType=null;
+		if(reg!=null) signalType=new Some(SignalDeclaration.Type.REGISTER);
+		else if (bus!=null) signalType=new Some(SignalDeclaration.Type.BUS);
+		else signalType=None;
 		signalDecl=new SignalDeclaration(toPosition($SIGNAL),list,subType,signalType,expr);
 		
 		return signalDecl;
@@ -766,9 +772,7 @@ public class Parser {
 		Expect(10);
 		expr = expression();
 		Expect(115);
-		val signal_list = if (id==null) Left(list) else Right(toIdentifier(id))
-		disconnectSpec= new DisconnectionSpecification(toPosition($DISCONNECT),signal_list,type,expr);
-		
+		disconnectSpec= new DisconnectionSpecification(toPosition($DISCONNECT),id==null?new Left(list):new Right(toIdentifier(id)),type,expr);
 		return disconnectSpec;
 	}
 
@@ -814,7 +818,7 @@ public class Parser {
 			selectedPart = name_selected_part();
 			parts.append(selectedPart);
 		}
-		name =new SelectedName(prefix.id +: parts.toList());
+		prepend.prepend(prefix); name =new SelectedName(parts.toList());
 		return name;
 	}
 
@@ -1107,7 +1111,7 @@ public class Parser {
 				list = parameter_interface_list_procedure();
 				Expect(119);
 			}
-			decl=new ProcedureDeclaration(toPosition($PROCEDURE),designator,list)
+			decl=new ProcedureDeclaration(toPosition($PROCEDURE),designator,list);
 		} else if (la.kind == 36 || la.kind == 42 || la.kind == 72) {
 			if (la.kind == 42 || la.kind == 72) {
 				if (la.kind == 72) {
@@ -1186,12 +1190,13 @@ public class Parser {
 		if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
 			endDesignator = designator();
 		}
-		= $subprogramDecl match {
-		case procDecl : ProcedureDeclaration => 
-			new ProcedureDefinition($subprogramDecl.position,procDecl.identifier,procDecl.parameterInterfaceList,declItems.toList(),sequentialStatements,endIdent)
-		case funcDecl : FunctionDeclaration =>
-			new FunctionDefinition($subprogramDecl.position,funcDecl.pure,funcDecl.identifier,funcDecl.parameterInterfaceList,funcDecl.returnType,declItems.toList(),sequentialStatements,endIdent)
-		}	
+		if (subprogramDecl instanceof ProcedureDeclaration){
+		ProcedureDeclaration procDecl = (ProcedureDeclaration)subprogramDecl;
+		subProgramDef=new ProcedureDefinition(subprogramDecl.position,procDecl.identifier,procDecl.parameterInterfaceList,declItems.toList(),sequentialStatements,endIdent);
+		}else {
+			FunctionDeclaration funcDecl=(FunctionDeclaration)subprogramDecl;
+			subProgramDef=new FunctionDefinition(subprogramDecl.position,funcDecl.pure,funcDecl.identifier,funcDecl.parameterInterfaceList,funcDecl.returnType,declItems.toList(),sequentialStatements,endIdent);
+		}
 		
 		return subProgramDef;
 	}
@@ -1249,7 +1254,7 @@ public class Parser {
 	Seq<SequentialStatement>  sequential_statement_list() {
 		Seq<SequentialStatement>  list;
 		ListBuffer<SequentialStatement> tmpList=new ListBuffer<SequentialStatement>();
-		list=List()
+		list=List();
 		
 		while (StartOf(12)) {
 			stmt = sequential_statement();
@@ -1264,17 +1269,17 @@ public class Parser {
 		switch (la.kind) {
 		case 118: {
 			enumTypeDef = enumeration_type_definition(id,pos);
-			typeDef=enumTypeDef 
+			typeDef=enumTypeDef; 
 			break;
 		}
 		case 73: {
 			intOrFloat = integer_or_floating_point_type_definition(id,pos);
-			typeDef=intOrFloat
+			typeDef=intOrFloat;
 			break;
 		}
 		case 15: {
 			arrayTypeDef = array_type_definition(id,pos);
-			typeDef=arrayTypeDef
+			typeDef=arrayTypeDef;
 			break;
 		}
 		case 74: {
@@ -1328,10 +1333,10 @@ public class Parser {
 
 	AbstractArrayTypeDefinition  array_type_definition(Identifier id,Position pos) {
 		AbstractArrayTypeDefinition  arrayTypeDef;
-		ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>() 
+		ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>(); 
 		Expect(15);
-		if (unConstraintList.isEmpty) $arrayTypeDef=new ConstrainedArrayTypeDefinition($pos,$id,$index_constraint.ranges,$subType.subType)
-		else $arrayTypeDef=new UnconstrainedArrayTypeDefinition($pos,$id,unConstraintList.toList(),$subType.subType)
+		if (unConstraintList.isEmpty) arrayTypeDef=new ConstrainedArrayTypeDefinition($pos,$id,$index_constraint.ranges,$subType.subType);
+		else arrayTypeDef=new UnconstrainedArrayTypeDefinition($pos,$id,unConstraintList.toList(),$subType.subType);
 		
 		return arrayTypeDef;
 	}
@@ -1399,8 +1404,8 @@ public class Parser {
 		if (la.kind == 73 || la.kind == 118) {
 			constraint = constraint();
 		}
-		=if (n2!=null) new SubTypeIndication($n1.name_,$n2.name_,$constraint.constraint_)
-		else new SubTypeIndication(None,$n1.name_,$constraint.constraint_)
+		if (n2!=null) subType=new SubTypeIndication(n1,n2,constraint);
+		else subType=new SubTypeIndication(None,n1,constraint);
 		
 		return subType;
 	}
@@ -1458,7 +1463,7 @@ public class Parser {
 	Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>  entity_name_list() {
 		Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>  list;
 		if (StartOf(15)) {
-			elements=new ListBuffer<Tuple2[Identifier,Option[Signature]]>() 
+			elements=new ListBuffer<Tuple2<Identifier,Option<Signature>>>(); 
 			designator = entity_designator();
 			elements.append(designator); 
 			while (la.kind == 116) {
@@ -1469,10 +1474,10 @@ public class Parser {
 			list=Left(elements.toList());
 		} else if (la.kind == 64) {
 			Get();
-			=Right(toIdentifier($OTHERS));
+			list=new Right<Identifier>(toIdentifier($OTHERS));
 		} else if (la.kind == 12) {
 			Get();
-			=Right(toIdentifier($ALL));
+			list=new Right<Identifier>(toIdentifier($ALL));
 		} else SynErr(153);
 		return list;
 	}
@@ -1572,7 +1577,7 @@ public class Parser {
 
 	Tuple2<Identifier,Option<Signature>>  entity_designator() {
 		Tuple2<Identifier,Option<Signature>>  designator;
-		Identifier id=null 
+		Identifier id=null; 
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
 			id=identifier;
@@ -1586,7 +1591,7 @@ public class Parser {
 		if (la.kind == 120) {
 			sig = signature();
 		}
-		designator=(id,Option($signature.signature_)); 
+		designator=new Tuple2<Identifier,Option<Signature>>(id,new Option<Signature>(sig)); 
 		return designator;
 	}
 
@@ -1657,7 +1662,7 @@ public class Parser {
 	Seq<SelectedName>  selected_name_list() {
 		Seq<SelectedName>  list;
 		ListBuffer<SelectedName> tmpList=new ListBuffer<SelectedName>();
-		list=List()
+		list=List();
 		
 		n1 = selected_name();
 		tmpList.append(n1);
@@ -1666,7 +1671,7 @@ public class Parser {
 			n2 = selected_name();
 			tmpList.append(n2);
 		}
-		=tmpList.toList();
+		list=tmpList.toList();
 		return list;
 	}
 
@@ -1682,7 +1687,7 @@ public class Parser {
 
 	Seq<Either<Name,Identifier>>  group_constituent_list() {
 		Seq<Either<Name,Identifier>>  list;
-		ListBuffer<Either<Name,Identifier>>() elements=new ListBuffer<Either<Name,Identifier>>(); 
+		ListBuffer<Either<Name,Identifier>> elements=new ListBuffer<Either<Name,Identifier>>(); 
 		c1 = group_constituent();
 		elements.append(c1); 
 		while (la.kind == 116) {
@@ -1726,7 +1731,7 @@ public class Parser {
 
 	PhysicalTypeDefinition  physical_type_definition(Identifier id,Position pos) {
 		PhysicalTypeDefinition  physicalTypeDef;
-		ListBuffer<PhysicalTypeDefinition.Element> elements=new ListBuffer<PhysicalTypeDefinition.Element>() 
+		ListBuffer<PhysicalTypeDefinition.Element> elements=new ListBuffer<PhysicalTypeDefinition.Element>(); 
 		Expect(73);
 		range = range();
 		Expect(96);
@@ -1950,8 +1955,8 @@ public class Parser {
 
 	ComponentInstantiationStatement  component_instantiation_statement(Identifier label) {
 		ComponentInstantiationStatement  stmt;
-		var componentType:ComponentInstantiationStatement.ComponentType.Value=null
-		val firstToken=input.LT(1)
+		ComponentInstantiationStatement.ComponentType.Value componentType =null;
+		Token firstToken=la;
 		
 		if (la.kind == 38) {
 			genericMap = generic_map_aspect();
@@ -2010,17 +2015,17 @@ public class Parser {
 		ConcurrentStatement  generateStmt;
 		if (la.kind == 35) {
 			forGenerateStmt = for_generate_statement(label);
-			generateStmt=forGenerateStmt
+			generateStmt=forGenerateStmt;
 		} else if (la.kind == 41) {
 			ifGenerateStmt = if_generate_statement(label);
-			generateStmt=ifGenerateStmt
+			generateStmt=ifGenerateStmt;
 		} else SynErr(167);
 		return generateStmt;
 	}
 
 	ProcessStatement  process_statement(Identifier label,Boolean postponed) {
 		ProcessStatement  processStmt;
-		ListBuffer<DeclarativeItem>() declItem=new ListBuffer<DeclarativeItem>(); 
+		ListBuffer<DeclarativeItem> declItem=new ListBuffer<DeclarativeItem>(); 
 		Expect(70);
 		if (la.kind == 118) {
 			Get();
@@ -2095,8 +2100,8 @@ public class Parser {
 
 	Seq<Name>  name_list() {
 		Seq<Name>  list;
-		val ListBuffer<Name>=new ListBuffer<Name>();
-		list=List()
+		ListBuffer<Name> tmpList=new ListBuffer<Name>();
+		list=List();
 		
 		n1 = name();
 		tmpList.append(n1);
@@ -2187,7 +2192,7 @@ public class Parser {
 
 	ConcurrentSelectedSignalAssignment  selected_signal_assignment(Identifier label,Boolean postponed) {
 		ConcurrentSelectedSignalAssignment  signalAssignment;
-		ListBuffer<ConcurrentSelectedSignalAssignment.When>() elements=new ListBuffer<ConcurrentSelectedSignalAssignment.When>(); 
+		ListBuffer<ConcurrentSelectedSignalAssignment.When> elements=new ListBuffer<ConcurrentSelectedSignalAssignment.When>(); 
 		Expect(103);
 		expr = expression();
 		Expect(82);
@@ -2240,7 +2245,7 @@ public class Parser {
 		return mechanism;
 	}
 
-	void conditional_waveforms(ListBuffer<Object> elements) {
+	void conditional_waveforms(ListBuffer elements) {
 		waveform = waveform();
 		if (la.kind == 101) {
 			Get();
@@ -2250,13 +2255,13 @@ public class Parser {
 				conditional_waveforms(elements);
 			}
 		}
-		new ConcurrentConditionalSignalAssignment.When(waveform,expr) +=: elements;
+		elements.prepend(new ConcurrentConditionalSignalAssignment.When(waveform,expr));
 	}
 
 	Waveform  waveform() {
 		Waveform  waveForm;
 		if (StartOf(17)) {
-			ListBuffer<Waveform.Element> elements=new ListBuffer<Waveform.Element>()
+			ListBuffer<Waveform.Element> elements=new ListBuffer<Waveform.Element>();
 			e1 = waveform_element();
 			elements.append(e1);
 			while (la.kind == 116) {
@@ -2346,21 +2351,18 @@ public class Parser {
 
 	Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>  generate_statement_body() {
 		Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>  statementList;
-		ListBuffer<DeclarativeItem>() tmpBockItems=new ListBuffer<DeclarativeItem>();
-		$blockItems=List()
-		$statementList=List()
+		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
 		
 		if (StartOf(18)) {
 			while (StartOf(3)) {
 				item = block_declarative_item();
-				tmpBockItems.append(item);
+				declarativeItems.append(item);
 			}
 			Expect(18);
 		}
 		statementList = architecture_statement_list();
-		=tmpBockItems.toList()
-		$statementList=$architecture_statement_list.list
-		 	
+		statementList=new Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>(declarativeItems,statementList);
+		
 		return statementList;
 	}
 
@@ -2534,6 +2536,7 @@ public class Parser {
 
 	SequentialStatement  loop_statement(Identifier label) {
 		SequentialStatement  loopStmt;
+		Token firstToken=la;
 		if (la.kind == 35 || la.kind == 102) {
 			stmtType = iteration_scheme();
 		}
@@ -2545,14 +2548,11 @@ public class Parser {
 			end_loop_label = identifier();
 		}
 		Expect(115);
-		val position=toPosition(firstToken)
-		loopStmt=Option(stmtType) match {
-			case Some(x)=> x match {
-				case Left(condition)=>new WhileStatement(position,$label,condition,sequentialStatements,$end_loop_label.id)
-				case Right((identifier,discreteRange)) =>new ForStatement(position,$label,identifier,discreteRange,sequentialStatements,$end_loop_label.id)
-			}
-			case None =>new LoopStatement(position,$label,sequentialStatements,$end_loop_label.id)
-		}
+		Position position=toPosition(firstToken);
+		if (stmtType!=null){
+			if (stmtType instanceof Left) loopStmt=new WhileStatement(position,label,((Left)stmtType).a,sequentialStatements,end_loop_label);
+			//TODO case Right((identifier,discreteRange)) =>new ForStatement(position,label,identifier,discreteRange,sequentialStatements,end_loop_label.id);
+		}else loopStmt=new LoopStatement(position,label,sequentialStatements,end_loop_label.id);
 		
 		return loopStmt;
 	}
@@ -2568,7 +2568,7 @@ public class Parser {
 			expr = condition();
 		}
 		Expect(115);
-		=new NextStatement(toPosition($NEXT),label,identifier,expr);
+		nextStmt=new NextStatement(toPosition($NEXT),label,identifier,expr);
 		return nextStmt;
 	}
 
@@ -2602,7 +2602,7 @@ public class Parser {
 		NullStatement  nullStmt;
 		Expect(59);
 		Expect(115);
-		nullStmt=new NullStatement(toPosition($NULL),label)
+		nullStmt=new NullStatement(toPosition($NULL),label);
 		return nullStmt;
 	}
 
@@ -2805,7 +2805,7 @@ public class Parser {
 	Tuple2<LogicalExpression.Operator.Value,Position>  logical_operator() {
 		Tuple2<LogicalExpression.Operator.Value,Position>  op;
 		if (la.kind == 13) {
-			=toPosition(input.LT(1))
+			Position pos=toPosition(la);
 			Get();
 			logOp=LogicalExpression.Operator.AND;
 		} else if (la.kind == 63) {
@@ -2837,7 +2837,8 @@ public class Parser {
 		Tuple2<Relation.Operator.Value,Position>  op;
 		switch (la.kind) {
 		case 129: {
-			=toPosition(input.LT(1))
+			Position pos=toPosition(la);
+			Relation.Operator.Value relOp=null;
 			
 			Get();
 			relOp=Relation.Operator.EQ;
@@ -2866,6 +2867,7 @@ public class Parser {
 		case 109: {
 			Get();
 			relOp=Relation.Operator.GEQ;
+			op=new Tuple2<Relation.Operator.Value,Position>(relOp,pos);
 			break;
 		}
 		default: SynErr(180); break;
@@ -2879,7 +2881,7 @@ public class Parser {
 			sign = sign();
 		}
 		t1 = term();
-		simpleExpr=if (s!=null) new SimpleExpression($s.pos,$s.signOp,$t1.term_,None,None) else $t1.term_
+		if (s!=null) simpleExpr=new SimpleExpression(s._2,s._1,t1,None,None); else simpleExpr=t1;
 		while (la.kind == 117 || la.kind == 125 || la.kind == 126) {
 			op = adding_operator();
 			t2 = term();
@@ -2892,8 +2894,8 @@ public class Parser {
 		Tuple2<ShiftExpression.Operator.Value,Position>  op;
 		switch (la.kind) {
 		case 87: {
-			ShiftExpression.Operator.Value shiftOp
-			$pos=toPosition(input.LT(1))
+			ShiftExpression.Operator.Value shiftOp=null;
+			Position pos=toPosition(la);
 			
 			Get();
 			shiftOp=ShiftExpression.Operator.SLL;
@@ -2922,6 +2924,7 @@ public class Parser {
 		case 81: {
 			Get();
 			shiftOp=ShiftExpression.Operator.ROR;
+			op=new Tuple2<ShiftExpression.Operator.Value,Position>(shiftOp,pos);
 			break;
 		}
 		default: SynErr(181); break;
@@ -2932,12 +2935,15 @@ public class Parser {
 	Tuple2<SimpleExpression.SignOperator.Value,Position>  sign() {
 		Tuple2<SimpleExpression.SignOperator.Value,Position>  op;
 		if (la.kind == 125) {
-			=toPosition(input.LT(1)); 
+			SimpleExpression.SignOperator.Value signOp=null;
+			Position pos=toPosition(la);
+			
 			Get();
 			signOp=SimpleExpression.SignOperator.PLUS;
 		} else if (la.kind == 126) {
 			Get();
 			signOp=SimpleExpression.SignOperator.MINUS;
+			op=new Tuple2<SimpleExpression.SignOperator.Value,Position>(signOp,pos);
 		} else SynErr(182);
 		return op;
 	}
@@ -2957,7 +2963,9 @@ public class Parser {
 	Tuple2<SimpleExpression.AddOperator.Value,Position>  adding_operator() {
 		Tuple2<SimpleExpression.AddOperator.Value,Position>  op;
 		if (la.kind == 125) {
-			=toPosition(input.LT(1)); 
+			SimpleExpression.AddOperator.Value addOp=null;
+			Position pos=toPosition(la);
+			
 			Get();
 			addOp=SimpleExpression.AddOperator.PLUS;
 		} else if (la.kind == 126) {
@@ -2966,6 +2974,7 @@ public class Parser {
 		} else if (la.kind == 117) {
 			Get();
 			addOp=SimpleExpression.AddOperator.AMPERSAND;
+			op=new Tuple2<SimpleExpression.AddOperator.Value,Position>(addOp,pos);
 		} else SynErr(183);
 		return op;
 	}
@@ -2973,7 +2982,9 @@ public class Parser {
 	Tuple2<Term.Operator.Value,Position>  multiplying_operator() {
 		Tuple2<Term.Operator.Value,Position>  op;
 		if (la.kind == 123) {
-			=toPosition(input.LT(1));
+			Term.Operator.Value mulOp=null;
+			Position pos=toPosition(la);
+			
 			Get();
 			mulOp=Term.Operator.MUL;
 		} else if (la.kind == 124) {
@@ -2985,6 +2996,7 @@ public class Parser {
 		} else if (la.kind == 77) {
 			Get();
 			mulOp=Term.Operator.REM;
+			op=new Tuple2<SimpleExpression.AddOperator.Value,Position>(mulOp,pos);
 		} else SynErr(184);
 		return op;
 	}
@@ -3035,7 +3047,7 @@ public class Parser {
 			if (la.kind == 118) {
 				constraint = index_constraint();
 			}
-			newExpression=new NewExpression(toPosition($NEW),Right(new SubTypeIndication(None,$selected_name.name_,Right(ranges))))
+			newExpression=new NewExpression(toPosition($NEW),Right(new SubTypeIndication(None,$selected_name.name_,Right(ranges))));
 		} else SynErr(187);
 		return newExpression;
 	}
@@ -3126,7 +3138,7 @@ public class Parser {
 
 	Name.IndexPart  name_indexed_part() {
 		Name.IndexPart  part;
-		ListBuffer<Expression>() indexes=new ListBuffer<Expression>(); 
+		ListBuffer<Expression> indexes=new ListBuffer<Expression>(); 
 		Expect(118);
 		e1 = expression();
 		indexes.append(e1);
