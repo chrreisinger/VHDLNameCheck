@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <classpath>
+<classpathentry kind="src" path="src\main\java" output="target\scala_2.8.0\test-classes" including="**/*.java" />
 <classpathentry kind="src" path="src\test\scala" output="target\scala_2.8.0\test-classes" including="**/*.scala" />
 <classpathentry kind="src" path="src\main\scala" including="**/*.scala" />
 <classpathentry kind="lib" path="lib_managed\scala_2.8.0\compile\fig_2.8.0-1.0.3.jar" />
