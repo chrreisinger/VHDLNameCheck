@@ -1299,44 +1299,31 @@ private Position toPosition(Token token){
 
 	AbstractTypeDeclaration  type_definition(Identifier id,Position pos) {
 		AbstractTypeDeclaration  typeDef;
-		switch (la.kind) {
-		case 117: {
+		if (la.kind == 117) {
 			enumTypeDef = enumeration_type_definition(id,pos);
 			typeDef=enumTypeDef; 
-			break;
-		}
-		case 73: {
+		} else if (la.kind == 73) {
 			intOrFloat = integer_or_floating_point_type_definition(id,pos);
 			typeDef=intOrFloat;
-			break;
-		}
-		case 15: {
+		} else if (la.kind == 15) {
 			arrayTypeDef = array_type_definition(id,pos);
 			typeDef=arrayTypeDef;
-			break;
-		}
-		case 74: {
+		} else if (la.kind == 74) {
 			recordTypeDef = record_type_definition(id,pos);
 			typeDef=recordTypeDef;
-			break;
-		}
-		case 9: {
+		} else if (la.kind == 9) {
 			accessTypeDef = access_type_definition(id,pos);
 			typeDef=accessTypeDef;
-			break;
-		}
-		case 34: {
+		} else if (la.kind == 34) {
 			fileTypeDef = file_type_definition(id,pos);
 			typeDef=fileTypeDef;
-			break;
-		}
-		case 71: {
+		} else if (scanner.Peek()==_BODY) {
+			protectedTypeBody = protected_type_body(id,pos);
+			typeDef=protectedTypeBody;
+		} else if (la.kind == 71) {
 			protectedTypeDecl = protected_type_declaration(id,pos);
 			typeDef=protectedTypeDecl;
-			break;
-		}
-		default: SynErr(147); break;
-		}
+		} else SynErr(147);
 		return typeDef;
 	}
 
@@ -1409,6 +1396,25 @@ private Position toPosition(Token token){
 		type = type_mark();
 		fileTypeDef=new FileTypeDefinition(pos,id,type);
 		return fileTypeDef;
+	}
+
+	ProtectedTypeBodyDeclaration  protected_type_body(Identifier id,Position pos) {
+		ProtectedTypeBodyDeclaration  protectedTypeBody;
+		ListBuffer<DeclarativeItem> items=new ListBuffer<DeclarativeItem>(); 
+		Expect(71);
+		Expect(20);
+		while (StartOf(11)) {
+			item = protected_type_body_declarative_item();
+			items.append(item);
+		}
+		Expect(31);
+		Expect(71);
+		Expect(20);
+		if (la.kind == 5 || la.kind == 6) {
+			endIdentifier = identifier();
+		}
+		protectedTypeBody=new ProtectedTypeBodyDeclaration(pos,id,items.toList(),endIdentifier);
+		return protectedTypeBody;
 	}
 
 	ProtectedTypeDeclaration  protected_type_declaration(Identifier id,Position pos) {
@@ -1815,25 +1821,6 @@ private Position toPosition(Token token){
 			node=useClause;
 		} else SynErr(156);
 		return node;
-	}
-
-	ProtectedTypeBodyDeclaration  protected_type_body(Identifier id,Position pos) {
-		ProtectedTypeBodyDeclaration  protectedTypeBody;
-		ListBuffer<DeclarativeItem> items=new ListBuffer<DeclarativeItem>(); 
-		Expect(71);
-		Expect(20);
-		while (StartOf(11)) {
-			item = protected_type_body_declarative_item();
-			items.append(item);
-		}
-		Expect(31);
-		Expect(71);
-		Expect(20);
-		if (la.kind == 5 || la.kind == 6) {
-			endIdentifier = identifier();
-		}
-		protectedTypeBody=new ProtectedTypeBodyDeclaration(pos,id,items.toList(),endIdentifier);
-		return protectedTypeBody;
 	}
 
 	DeclarativeItem  protected_type_body_declarative_item() {

@@ -502,7 +502,7 @@ type_definition<out AbstractTypeDeclaration typeDef,Identifier id,Position pos> 
 		| record_type_definition<out recordTypeDef,id,pos> (.typeDef=recordTypeDef;.)
 		| access_type_definition<out accessTypeDef,id,pos> (.typeDef=accessTypeDef;.)
 		| file_type_definition<out fileTypeDef,id,pos> (.typeDef=fileTypeDef;.)
-		//TODO | (PROTECTED BODY)=>protected_type_body<out protectedTypeBody,id,pos> (.typeDef=protectedTypeBody;.)
+		| IF(scanner.Peek()==_BODY)protected_type_body<out protectedTypeBody,id,pos> (.typeDef=protectedTypeBody;.)
 		| protected_type_declaration<out protectedTypeDecl,id,pos> (.typeDef=protectedTypeDecl;.)
 		.
 
