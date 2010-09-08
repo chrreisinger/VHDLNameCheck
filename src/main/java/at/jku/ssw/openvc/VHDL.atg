@@ -1,12 +1,12 @@
 /* imports */
-import at.jku.ssw.openvc.*;
 import at.jku.ssw.openvc.ast.*;
 import at.jku.ssw.openvc.ast.concurrentStatements.*;
 import at.jku.ssw.openvc.ast.declarations.*;
 import at.jku.ssw.openvc.ast.expressions.*;
 import at.jku.ssw.openvc.ast.sequentialStatements.*;
-import at.jku.ssw.openvc.ast.ams.*;
 import scala.Either;
+import scala.Left;
+import scala.Right;
 import scala.Tuple2;
 import scala.Option;
 import scala.collection.Seq;
@@ -14,7 +14,32 @@ import scala.collection.mutable.ListBuffer;
 
 COMPILER VHDL
   /* arbitrary Java code */
+  
+  //group_template:GROUP identifier IS LPAREN
+  //group_declaration:GROUP identifier COLON
+  //la == GROUP
+boolean IsGroupTemplate() {
+	Token next;
+	do {
+		next = scanner.Peek();
+	}while (next.kind!=_IS && next.kind!=_COLON); 
+	return next.kind==_IS;
+}
 
+  //attribute_declaration: ATTRIBUTE identifier COLON type_mark SEMICOLON 
+  //attribute_specification: ATTRIBUTE identifier OF entity_name_list COLON entity_class IS expression SEMICOLON 
+  //la == ATTRIBUTE
+boolean IsAttributeDeclaration() {
+	Token next;
+	do {
+		next = scanner.Peek();
+	}while (next.kind!=_COLON && next.kind!=_OF);
+	return next.kind==_COLON;
+}
+
+private Position toPosition(Token token){
+ return new Position(token.line,token.col);
+}       
 /*--------------------------------------------------------------------*/
 
 
@@ -170,7 +195,6 @@ STRING_LITERAL ="blubx24".
 	XOR="xor".
   		
   	DOUBLESTAR    = "**".
-  	AMS_ASSIGN    = "==".
   	LEQ           = "<=".
   	GEQ           = ">=".
   	ARROW         = "=>".
@@ -204,12 +228,7 @@ IGNORE cr + lf + tab
 
 PRODUCTIONS
 
-VHDL
-=
-  "Coco/R" "Development" "Tools"        (. System.out.println(t.val); .)
-.
-
-design_file<out DesignFile designFile> =	
+VHDL<out DesignFile designFile> =	
 		(.ListBuffer<DesignUnit> units=new ListBuffer<DesignUnit>(); .)
 		{design_unit<out designUnit> (. units.append(designUnit); .) } //TODO change to *
 		(.designFile=new DesignFile(units.toList());.)
@@ -231,8 +250,8 @@ design_unit<out DesignUnit designUnit> =
 library_unit<out LibraryUnit libraryUnit> =
 		entity_declaration<out entityDecl>  (.libraryUnit=entityDecl;.)
 		| architecture_body<out archDecl> (.libraryUnit=archDecl;.)
+		| IF(scanner.Peek()==_BODY)package_body<out packageBody> (.libraryUnit=packageBody;.)
 		| package_declaration<out packageDecl> (.libraryUnit=packageDecl;.)
-		| package_body<out packageBody> (.libraryUnit=packageBody;.)
 		| configuration_declaration<out configDecl> (.libraryUnit=configDecl;.)
 		.	
 		
@@ -275,9 +294,9 @@ entity_declaration<out EntityDeclaration entityDecl> =
 		[BEGIN
 			/* TODO
 			{[label_colon<out label>] postponed=POSTPONED? 
-			(concurrent_assertion_statement<out assertStmt>[$label.label,postponed!=null] (.concurrentStmta.append(assertStmt);.)
-			| concurrent_procedure_call_statement<out procedureCallStmt> [$label.label,postponed!=null](.concurrentStmt.append(procedureCallStmt);.)
-			| process_statement[$label.label,postponed!=null] (.concurrentStmt.append($process_statement.processStmt);.)
+			(concurrent_assertion_statement<out assertStmt>[label,postponed!=null] (.concurrentStmta.append(assertStmt);.)
+			| concurrent_procedure_call_statement<out procedureCallStmt> [label,postponed!=null](.concurrentStmt.append(procedureCallStmt);.)
+			| process_statement[label,postponed!=null] (.concurrentStmt.append($process_statement.processStmt);.)
 			)} */]
 		END_TOKEN [ENTITY] [identifier<out end_identifier>] SEMICOLON
 		(.entityDecl=new EntityDeclaration(start_identifier,genericClause,portClause,declarativeItems.toList(),concurrentStmt.toList(),end_identifier);.)
@@ -292,11 +311,11 @@ entity_declarative_item<out DeclarativeItem node> =
 		| variable_declaration<out varDecl> (. node=varDecl; .)
 		| file_declaration<out fileDecl> (. node=fileDecl; .)
 		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| attribute_declaration<out attributeDecl> (. node=attributeDecl; .)
+		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (. node=attributeDecl; .)
 		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
 		| disconnection_specification<out disconnectSpec>  (.node=disconnectSpec;.)
 		| use_clause<out useClause> (.node=useClause;.)
-		| group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
+		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
 		| group_declaration<out groupDecl> (.node=groupDecl;.)
 		.	
 
@@ -312,8 +331,8 @@ architecture_body<out ArchitectureDeclaration archDecl> =
 		
 configuration_declarative_item<out DeclarativeItem item> =
 		| use_clause<out useClause> (.node=useClause;.)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
 		| group_declaration<out groupDecl> (.node=groupDecl;.)
+		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
 		.
 		
 configuration_declaration<out ConfigurationDeclaration configDecl> =
@@ -324,18 +343,18 @@ configuration_declaration<out ConfigurationDeclaration configDecl> =
 		END_TOKEN [CONFIGURATION] [identifier<out end_identifier>] SEMICOLON
 		(.configDecl=new ConfigurationDeclaration(start_identifier,declarativeItems.toList(),entityName,blockConfig,end_identifier);.)
 		.
-/*
+/* TODO
 block_configuration_index returns [Either[DiscreteRange,Expression\] node]
-	:	  (discrete_range)=>discrete_range {$node=Left($discrete_range.discreteRange)}
-		  |expression {$node=Right($expression.expr)}
+	:	  (discrete_range)=>discrete_range {$node=new Left($discrete_range.discreteRange)}
+		  |expression {$node=new Right($expression.expr)}
 		  /*|{vhdl2008}?=>alternative_label=label*/
 		  ;
 	
 block_specification returns [BlockConfigurationSpecification blockConfig]
 		//could be a block_statement_label or generate_statement_label
 	:	 (identifier)=>identifier (LPAREN block_configuration_index RPAREN)?
-			{new BlockConfigurationSpecification(Right(($identifier.id,$block_configuration_index.node)))}
-		 | selected_name {$blockConfig=new BlockConfigurationSpecification(Left($selected_name.name_))}
+			{new BlockConfigurationSpecification(new Right(($identifier.id,$block_configuration_index.node)))}
+		 | selected_name {$blockConfig=new BlockConfigurationSpecification(new Left($selected_name.name_))}
 		 ;	
 */		 	
 block_configuration<out BlockConfiguration blockConfig> =
@@ -358,7 +377,7 @@ component_configuration<out ComponentConfiguration componentConfig> =
 			[binding_indication<out indication> SEMICOLON]
 			[block_configuration<out blockConfiguration>]
 		END_TOKEN FOR SEMICOLON
-		(.componentConfig=new ComponentConfiguration($component_specification.spec,indication,blockConfiguration);.) 
+		(.componentConfig=new ComponentConfiguration(componentSpec,indication,blockConfiguration);.) 
 		.	
 			
 package_declaration<out PackageDeclaration packageDecl> = 
@@ -379,11 +398,11 @@ package_declarative_item<out DeclarativeItem node> =
 		| file_declaration<out fileDecl> (. node=fileDecl; .)
 		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
 		| component_declaration<out componentDecl> (.node=componentDecl;.)
-		| attribute_declaration<out attributeDecl> (. node=attributeDecl; .)
+		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (. node=attributeDecl; .)
 		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
 		| disconnection_specification<out disconnectSpec>  (.node=disconnectSpec;.)
 		| use_clause<out useClause> (.node=useClause;.)
-		| group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
+		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
 		| group_declaration<out groupDecl> (.node=groupDecl;.)
 		.
 
@@ -406,20 +425,23 @@ package_body_declarative_item <out DeclarativeItem node> =
 		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
 		| use_clause<out useClause> (.node=useClause;.)
 		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .) //attribute_specification is not part of VHDL 2002, added to compile ghdl math_real-body.vhd
-		| group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
+		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
 		| group_declaration<out groupDecl> (.node=groupDecl;.)
 		.
 		
 designator<out Identifier id> =
 	  identifier<out identifier> (.id=identifier;.)
-	  | STRING_LITERAL (.id=toIdentifier($STRING_LITERAL);.) //STRING_LITERAL is a operator symbol
+	  | STRING_LITERAL (.id=toIdentifier(t);.) //STRING_LITERAL is a operator symbol
 	  .
 	  
 subprogram_specification<out SubProgramDeclaration decl> =
+			(.Position pos=toPosition(la);.)
+			(
 			PROCEDURE designator<out designator> [LPAREN parameter_interface_list_procedure<out list> RPAREN] 
-			(.decl=new ProcedureDeclaration(toPosition($PROCEDURE),designator,list);.)
+			(.decl=new ProcedureDeclaration(pos,designator,list);.)
 			| [PURE | IMPURE] FUNCTION designator<out designator> [LPAREN parameter_interface_list_function<out list> RPAREN] RETURN type_mark<out returnType> //TODO save impure
-			(.decl=new FunctionDeclaration(toPosition($FUNCTION),i==null,designator,list,returnType);.)
+			(.decl=new FunctionDeclaration(pos,i==null,designator,list,returnType);.)
+			)
 			.	
 
 subprogram_declartion_or_body<out DeclarativeItem declOrBody> =
@@ -457,17 +479,18 @@ subprogram_declarative_item<out DeclarativeItem node> =
 		| variable_declaration<out varDecl> (. node=varDecl; .)
 		| file_declaration<out fileDecl> (. node=fileDecl; .)
 		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
+		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
 		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
 		| use_clause<out useClause> (.node=useClause;.)
-		| group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
+		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
 		| group_declaration<out groupDecl> (.node=groupDecl;.)
 		.
 
 type_declaration<out AbstractTypeDeclaration typeDecl> =
+		(.Position pos=toPosition(la);.)
 		TYPE identifier<out id> (
-		IS type_definition<out typeDef,id,toPosition($TYPE)> SEMICOLON (.typeDecl=typeDef;.)
-		| SEMICOLON (.typeDecl=new IncompleteTypeDeclaration(toPosition($TYPE),id);.) 
+		IS type_definition<out typeDef,id,pos> SEMICOLON (.typeDecl=typeDef;.)
+		| SEMICOLON (.typeDecl=new IncompleteTypeDeclaration(pos,id);.) 
 		)
 		.
 
@@ -479,80 +502,88 @@ type_definition<out AbstractTypeDeclaration typeDef,Identifier id,Position pos> 
 		| record_type_definition<out recordTypeDef,id,pos> (.typeDef=recordTypeDef;.)
 		| access_type_definition<out accessTypeDef,id,pos> (.typeDef=accessTypeDef;.)
 		| file_type_definition<out fileTypeDef,id,pos> (.typeDef=fileTypeDef;.)
-		//TODO | (PROTECTED BODY)=>protected_type_body[$id,$pos] (.typeDef=protectedTypeBody;.)
+		//TODO | (PROTECTED BODY)=>protected_type_body<out protectedTypeBody,id,pos> (.typeDef=protectedTypeBody;.)
 		| protected_type_declaration<out protectedTypeDecl,id,pos> (.typeDef=protectedTypeDecl;.)
 		.
 
 	
 constant_declaration <out ConstantDeclaration constantDecl> =
+		(.Position pos=toPosition(la);.)
 		CONSTANT identifier_list<out list> COLON subtype_indication<out subType> [VAR_ASSIGN expression<out expr>] SEMICOLON 
-		(.constantDecl=new ConstantDeclaration(toPosition($CONSTANT),list,subType,expr);.)
+		(.constantDecl=new ConstantDeclaration(pos,list,subType,expr);.)
 		.
 	
 signal_declaration<out SignalDeclaration signalDecl> =
+		(.Position pos=toPosition(la);.)
 		SIGNAL identifier_list<out list> COLON subtype_indication<out subType> [REGISTER|BUS] [VAR_ASSIGN expression<out expr>] SEMICOLON
 		(.
 			Option<SignalDeclaration.Type> signalType=null;
 				if(reg!=null) signalType=new Some(SignalDeclaration.Type.REGISTER);
 				else if (bus!=null) signalType=new Some(SignalDeclaration.Type.BUS);
 				else signalType=None;
-			signalDecl=new SignalDeclaration(toPosition($SIGNAL),list,subType,signalType,expr);
+			signalDecl=new SignalDeclaration(pos,list,subType,signalType,expr);
 		.)
 		.
 		
 variable_declaration<out VariableDeclaration varDecl> =
+		(.Position pos=toPosition(la);.)
 		[SHARED] VARIABLE identifier_list<out list> COLON subtype_indication<out subType> [VAR_ASSIGN expression<out expr>] SEMICOLON
-		(.varDecl=new VariableDeclaration(toPosition($VARIABLE),$SHARED!=null,list,subType,expr);.)
+		(.varDecl=new VariableDeclaration(pos,$SHARED!=null,list,subType,expr);.)
 		.
 	
 file_declaration<out FileDeclaration fileDecl> =
+		(.Position pos=toPosition(la);.)
 		FILE identifier_list<out list> COLON subtype_indication<out subType> [[OPEN expression<out file_open_kind_expression>] IS expression<out file_logical_name>] SEMICOLON
-		(.fileDecl=new FileDeclaration(toPosition($FILE),list,subType,file_open_kind_expression,file_logical_name);.)
+		(.fileDecl=new FileDeclaration(pos,list,subType,file_open_kind_expression,file_logical_name);.)
 		.
 	
 alias_declaration<out AliasDeclaration aliasDecl> =
+		(.Position pos=toPosition(la);.)
 		ALIAS alias_designator<out designator> [COLON subtype_indication<out subType>] IS name<out name> [signature<out signature>] SEMICOLON
-		(.aliasDecl=new AliasDeclaration(toPosition($ALIAS),designator,subType,name,signature);.)
+		(.aliasDecl=new AliasDeclaration(pos,designator,subType,name,signature);.)
 		.
 
 alias_designator<out Identifier id> =
 		(identifier<out identifier> (.id=identifier;.)
-		|CHARACTER_LITERAL(.id=toIdentifier($CHARACTER_LITERAL);.)
-		|STRING_LITERAL(.id=toIdentifier($STRING_LITERAL);.)
+		|CHARACTER_LITERAL(.id=toIdentifier(t);.)
+		|STRING_LITERAL(.id=toIdentifier(t);.)
 		).	
 	
 component_declaration<out ComponentDeclaration componentDecl> =
+		(.Position pos=toPosition(la);.)
 		COMPONENT identifier<out start_identifier> [IS]
 			generic_clause<out gernicClause>
 			port_clause<out portClause>
 		END_TOKEN COMPONENT [identifier<out end_identifier>] SEMICOLON
-		(.componentDecl=new ComponentDeclaration(toPosition($component),start_identifier,gernicClause,portClause,end_identifier);.)
+		(.componentDecl=new ComponentDeclaration(pos,start_identifier,gernicClause,portClause,end_identifier);.)
 		.
 
 attribute_declaration<out AttributeDeclaration attributeDecl> =
+		(.Position pos=toPosition(la);.)
 		ATTRIBUTE identifier<out identifier> COLON type_mark<out type> SEMICOLON 
-		(.attributeDecl=new AttributeDeclaration(toPosition($ATTRIBUTE),identifier,type);.)
+		(.attributeDecl=new AttributeDeclaration(pos,identifier,type);.)
 		.
 	
 attribute_specification<out AttributeSpecification node> =
+		(.Position pos=toPosition(la);.)
 		ATTRIBUTE identifier<out identifier> OF entity_name_list<out nameList> COLON entity_class<out entityClass> IS expression<out expr> SEMICOLON 
-		(.node=new AttributeSpecification(toPosition($ATTRIBUTE),identifier,nameList,entityClass,expr);.)
+		(.node=new AttributeSpecification(pos,identifier,nameList,entityClass,expr);.)
 		.
 		
 entity_designator<out Tuple2<Identifier,Option<Signature>> designator> =
 		(. Identifier id=null; .)
 		(identifier<out identifier> (.id=identifier;.)
-		|CHARACTER_LITERAL(.id=toIdentifier($CHARACTER_LITERAL);.)
-		|STRING_LITERAL(.id=toIdentifier($STRING_LITERAL);.)
+		|CHARACTER_LITERAL(.id=toIdentifier(t);.)
+		|STRING_LITERAL(.id=toIdentifier(t);.)
 		) [signature<out sig>]
 		(.designator=new Tuple2<Identifier,Option<Signature>>(id,new Option<Signature>(sig)); .)
 		.
 	
 entity_name_list<out Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier> list> =
 		(. elements=new ListBuffer<Tuple2<Identifier,Option<Signature>>>(); .)
-		entity_designator<out designator> (.elements.append(designator); .) {COMMA entity_designator<out designator> (.elements.append(designator);.)} (.list=Left(elements.toList());.)
-		| OTHERS (.list=new Right<Identifier>(toIdentifier($OTHERS));.)
-		| ALL (.list=new Right<Identifier>(toIdentifier($ALL));.)
+		entity_designator<out designator> (.elements.append(designator); .) {COMMA entity_designator<out designator> (.elements.append(designator);.)} (.list=new Left(elements.toList());.)
+		| OTHERS (.list=new Right(toIdentifier(t));.)
+		| ALL (.list=new Right(toIdentifier(t));.)
 		.
 
 entity_class<out EntityClass.Value entityClass> =
@@ -576,15 +607,16 @@ entity_class<out EntityClass.Value entityClass> =
 		.
 		
 configuration_specification<out ConfigurationSpecification configSpec> =
+		(.Position pos=toPosition(la);.)
 		FOR component_specification<out componentSpec>
 			binding_indication<out indication> SEMICOLON
-		(.configSpec= new ConfigurationSpecification(toPosition($FOR));.)
+		(.configSpec= new ConfigurationSpecification(pos);.)
 		.
 		
 instantiation_list<out Either<Seq<Identifier>,Identifier> list> =
-	  identifier_list<out list> (.list=Left(list);.)
-		| OTHERS (.list=Right(toIdentifier($OTHERS));.)
-		| ALL (.list=Right(toIdentifier($ALL));.)
+	  identifier_list<out list> (.list=new Left(list);.)
+		| OTHERS (.list=new Right(toIdentifier(t));.)
+		| ALL (.list=new Right(toIdentifier(t));.)
 		.		
 
 component_specification<out Object spec> = 
@@ -604,8 +636,9 @@ binding_indication<out Object indication> =
 		.
 
 disconnection_specification<out DisconnectionSpecification disconnectSpec> =
+		(.Position pos=toPosition(la);.)
 		DISCONNECT (selected_name_list<out list> | OTHERS | ALL) COLON type_mark<out type> AFTER expression<out expr> SEMICOLON
-		(.disconnectSpec= new DisconnectionSpecification(toPosition($DISCONNECT),id==null?new Left(list):new Right(toIdentifier(id)),type,expr);.)
+		(.disconnectSpec= new DisconnectionSpecification(pos,id==null?new Left(list):new Right(toIdentifier(id)),type,expr);.)
 		.
 
 entity_class_entry<out GroupTemplateDeclaration.Element entry> =
@@ -614,20 +647,24 @@ entity_class_entry<out GroupTemplateDeclaration.Element entry> =
 		.
 		
 group_template_declaration<out GroupTemplateDeclaration groupTemplateDecl> =
-		(.ListBuffer<GroupTemplateDeclaration.Element> elements=new ListBuffer<GroupTemplateDeclaration.Element>(); .)
+		(.
+		  Position pos=toPosition(la);
+		  ListBuffer<GroupTemplateDeclaration.Element> elements=new ListBuffer<GroupTemplateDeclaration.Element>(); 
+	    .)
 		GROUP identifier<out identifier> IS LPAREN entity_class_entry<out e1> (.elements.append(e1);.) {COMMA entity_class_entry<out e2> (.elements.append(e2);.)}  RPAREN SEMICOLON
-		(.groupTemplateDecl=new GroupTemplateDeclaration(toPosition($GROUP),identifier,elements.toList());.)
+		(.groupTemplateDecl=new GroupTemplateDeclaration(pos,identifier,elements.toList());.)
 		.
 		
 		
 group_declaration<out GroupDeclaration groupDecl> =
+		(.Position pos=toPosition(la);.)
 		GROUP identifier<out identifier> COLON selected_name<out selectedName> LPAREN group_constituent_list<out list> RPAREN SEMICOLON
-		(.groupDecl=new GroupDeclaration(toPosition($GROUP),identifier,selectedName,list);.)
+		(.groupDecl=new GroupDeclaration(pos,identifier,selectedName,list);.)
 		.
 	
 group_constituent<out Either<Name,Identifier> constituent> =
-       name<out name> (.constituent=Left(name);.)
-    |  CHARACTER_LITERAL (.constituent=Right(toIdentifier($CHARACTER_LITERAL));.)
+       name<out name> (.constituent=new Left(name);.)
+    |  CHARACTER_LITERAL (.constituent=new Right(toIdentifier(t));.)
     .
 
 group_constituent_list<out Seq<Either<Name,Identifier>> list> =
@@ -637,13 +674,14 @@ group_constituent_list<out Seq<Either<Name,Identifier>> list> =
     	.
     
 use_clause<out UseClause useClause> =
+		(.Position pos=toPosition(la);.)
 		USE selected_name_list<out list> SEMICOLON
-		(.useClause=new UseClause(toPosition($USE),list);.)
+		(.useClause=new UseClause(pos,list);.)
 		.
 
 enumeration_literal<out Identifier id> =
 		identifier<out identifier> (.id=identifier;.)
-		|CHARACTER_LITERAL (.id=toIdentifier($CHARACTER_LITERAL);.)
+		|CHARACTER_LITERAL (.id=toIdentifier(t);.)
 		.
 	
 enumeration_type_definition<out EnumerationTypeDefinition enumTypeDef,Identifier id,Position pos> =
@@ -677,12 +715,12 @@ index_subtype_definition<out SelectedName typeMark> =
 array_type_definition<out AbstractArrayTypeDefinition arrayTypeDef,Identifier id,Position pos> = 
 		(. ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>(); .)
 		ARRAY (
-		//TODO (LPAREN index_subtype_definition)=>LPAREN type1=index_subtype_definition {unConstraintList += $type1.typeMark} (COMMA type2=index_subtype_definition {unConstraintList += $type2.typeMark})* RPAREN OF subType=subtype_indication
+		//TODO (LPAREN index_subtype_definition)=>LPAREN type1=index_subtype_definition {unConstraintList append $type1.typeMark} (COMMA type2=index_subtype_definition {unConstraintList append $type2.typeMark})* RPAREN OF subType=subtype_indication
 		//| index_constraint OF subType=subtype_indication
 		)
 		(.
-			if (unConstraintList.isEmpty) arrayTypeDef=new ConstrainedArrayTypeDefinition($pos,$id,$index_constraint.ranges,$subType.subType);
-			else arrayTypeDef=new UnconstrainedArrayTypeDefinition($pos,$id,unConstraintList.toList(),$subType.subType);
+			if (unConstraintList.isEmpty) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,$index_constraint.ranges,$subType.subType);
+			else arrayTypeDef=new UnconstrainedArrayTypeDefinition(pos,id,unConstraintList.toList(),$subType.subType);
 		.)
 		.
 		
@@ -737,16 +775,17 @@ protected_type_body_declarative_item<out DeclarativeItem node> =
 		| variable_declaration<out varDecl> (. node=varDecl; .)
 		| file_declaration<out fileDecl> (. node=fileDecl; .)
 		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
+		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
 		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
 		| use_clause<out useClause> (.node=useClause;.)
-		| group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
+		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
 		| group_declaration<out groupDecl> (.node=groupDecl;.)
 		.
 		
 subtype_declaration<out SubTypeDeclaration subTypeDecl> =
+		(.Position pos=toPosition(la);.)
 		SUBTYPE identifier<out identifier> IS subtype_indication<out subType> SEMICOLON
-		(.subTypeDecl=new SubTypeDeclaration(toPosition($SUBTYPE),identifier,subType);.)
+		(.subTypeDecl=new SubTypeDeclaration(pos,identifier,subType);.)
 		.
 		
 subtype_indication<out SubTypeIndication subType> =
@@ -781,14 +820,14 @@ range<out Range range> =
 		.
 
 constraint<out Either<Range,Seq<DiscreteRange>> constraint> =
-		range_constraint<out rangeContraint> (.constraint =Left(rangeContraint);.)
-		| index_constraint<out ranges> (.constraint =Right(ranges);.)
+		range_constraint<out rangeContraint> (.constraint = new Left(rangeContraint);.)
+		| index_constraint<out ranges> (.constraint = new Right(ranges);.)
 		.
 
 discrete_range<out DiscreteRange discreteRange> =
-		//TODO(simple_expression direction)=>r=range {$discreteRange=new DiscreteRange(Left($r.range_))}
-		//|(selected_name range_constraint)=>discrete_subtype_indication=subtype_indication {$discreteRange=new DiscreteRange(Right($discrete_subtype_indication.subType))}
-		 range<out range> (.discreteRange=new DiscreteRange(Left(range));.)
+		//TODO(simple_expression direction)=>r=range {$discreteRange=new DiscreteRange(new Left($r.range_))}
+		//|(selected_name range_constraint)=>discrete_subtype_indication=subtype_indication {$discreteRange=new DiscreteRange(new Right($discrete_subtype_indication.subType))}
+		 range<out range> (.discreteRange=new DiscreteRange(new Left(range));.)
 		.
 		
 type_mark<out SelectedName typeName> =
@@ -806,7 +845,7 @@ architecture_statement_list<out Seq<ConcurrentStatement> list> =
 
 architecture_statement<out ConcurrentStatement concurrentStmt> =
 		  label_colon<out label> (
-			//TODO (architecture_statement_with_label[null])=>architecture_statement_with_label[$label.label] {$stmt=$architecture_statement_with_label.stmt}
+			//TODO (architecture_statement_with_label[null])=>architecture_statement_with_label[label] {$stmt=$architecture_statement_with_label.stmt}
 			architecture_statement_optional_label<out stmt,label> (.concurrentStmt=stmt;.)
 			)
 		| architecture_statement_optional_label<out stmt,label> (.concurrentStmt=stmt;.)
@@ -838,7 +877,10 @@ port_map_aspect<out AssociationList list> =
 		.
 					
 block_statement<out BlockStatement blockStmt, Identifier label> =
-		(. ListBuffer<DeclarativeItem> declItem=new ListBuffer<DeclarativeItem>(); .)
+		(. 
+		   Position pos=toPosition(la);
+		   ListBuffer<DeclarativeItem> declItem=new ListBuffer<DeclarativeItem>(); 
+		.)
 		BLOCK [LPAREN expression<out guard_expression> RPAREN] [IS]
 			[generic_clause<out genericClause> [generic_map_aspect<out genericMap> SEMICOLON]]
 			[port_clause<out portClause> [port_map_aspect<out portMap> SEMICOLON]]
@@ -846,7 +888,7 @@ block_statement<out BlockStatement blockStmt, Identifier label> =
 		BEGIN
 			architecture_statement_list<out statementList>
 		END_TOKEN BLOCK [identifier<out end_block_label>] SEMICOLON 
-		(. blockStmt=new BlockStatement(toPosition($block),label,guard_expression,genericClause,genericMap,portClause,portMap,declItems.toList(),statementList,end_block_label);.)
+		(. blockStmt=new BlockStatement(pos,label,guard_expression,genericClause,genericMap,portClause,portMap,declItems.toList(),statementList,end_block_label);.)
 		.
 				
 block_declarative_item <out DeclarativeItem node> =
@@ -859,23 +901,26 @@ block_declarative_item <out DeclarativeItem node> =
 		| file_declaration<out fileDecl> (. node=fileDecl; .)
 		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
 		| component_declaration<out componentDecl> (.node=componentDecl;.)
+		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
 		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
 		| configuration_specification<out configSpec> (.node=configSpec;.)
 		| disconnection_specification<out disconnectSpec>  (.node=disconnectSpec;.)
 		| use_clause<out useClause> (.node=useClause;.)
-		| group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
+		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
 		| group_declaration<out groupDecl> (.node=groupDecl;.)
 		.
 		
 process_statement<out ProcessStatement processStmt,Identifier label,Boolean postponed> =
-		(. ListBuffer<DeclarativeItem> declItem=new ListBuffer<DeclarativeItem>(); .)
+		(. 
+		   Position pos=toPosition(la);
+		   ListBuffer<DeclarativeItem> declItem=new ListBuffer<DeclarativeItem>(); 
+		.)
 		PROCESS [LPAREN name_list<out name_list> RPAREN] [IS]
 			{process_declarative_item<out item> (.declItem.append(item);.)}
 		BEGIN
 			sequential_statement_list<out sequentialStatements>
 		END_TOKEN [POSTPONED] PROCESS [identifier<out end_process_label>] SEMICOLON
-		(.processStmt=new ProcessStatement(toPosition($process),label,postponed,name_list,declItem.toList(),sequentialStatements,end_process_label);.)
+		(.processStmt=new ProcessStatement(pos,label,postponed,name_list,declItem.toList(),sequentialStatements,end_process_label);.)
 		.
 		
 process_declarative_item <out DeclarativeItem node> =
@@ -887,9 +932,9 @@ process_declarative_item <out DeclarativeItem node> =
 		| file_declaration<out fileDecl> (. node=fileDecl; .)
 		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
 		| use_clause<out useClause> (.node=useClause;.)
+		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
 		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
-		| group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
+		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
 		| group_declaration<out groupDecl> (.node=groupDecl;.)
 		.
 		
@@ -899,8 +944,9 @@ concurrent_procedure_call_statement<out ConcurrentProcedureCallStatement procedu
 		.
 		
 concurrent_assertion_statement<out ConcurrentAssertionStatement assertStmt, Identifier label,Boolean postponed> =
+		(.Position pos=toPosition(la);.)
 		ASSERT condition<out expr>  [REPORT expression<out report_expression>] [SEVERITY expression<out severity_expression>] SEMICOLON
-		(.assertStmt=new ConcurrentAssertionStatement(toPosition($ASSERT),label,postponed,expr,report_expression,severity_expression);.)
+		(.assertStmt=new ConcurrentAssertionStatement(pos,label,postponed,expr,report_expression,severity_expression);.)
 		.
 							
 concurrent_signal_assignment_statement<ConcurrentSignalAssignmentStatement node, Identifier label,Boolean postponed> =
@@ -926,16 +972,19 @@ selected_waveform<out ConcurrentSelectedSignalAssignment.When whenClause> =
  		.  
  		
 selected_signal_assignment<out ConcurrentSelectedSignalAssignment signalAssignment,Identifier label,Boolean postponed> =
-		(. ListBuffer<ConcurrentSelectedSignalAssignment.When> elements=new ListBuffer<ConcurrentSelectedSignalAssignment.When>(); .)
+		(. 
+		   Position pos=toPosition(la);
+		   ListBuffer<ConcurrentSelectedSignalAssignment.When> elements=new ListBuffer<ConcurrentSelectedSignalAssignment.When>(); 
+		.)
 		WITH expression<out expr> SELECT
 			target<out target> LEQ [GUARDED] [delay_mechanism<out delay>] 
 			selected_waveform<out s1> (.elements.append(s1);.){COMMA selected_waveform<out s2>(.elements.append(s2);.)} SEMICOLON
-			(.signalAssignment=new ConcurrentSelectedSignalAssignment(toPosition($WITH),label,postponed,expr,target,$GUARDED!=null,delay,elements.toList());.)
+			(.signalAssignment=new ConcurrentSelectedSignalAssignment(pos,label,postponed,expr,target,$GUARDED!=null,delay,elements.toList());.)
 			.
 			
 target<out Target target> =
-   		name<out name> (.target = new Target(Left(name));.)
-  		| aggregate<out aggregate> (.target = new Target(Right(aggregate));.)
+   		name<out name> (.target = new Target(new Left(name));.)
+  		| aggregate<out aggregate> (.target = new Target(new Right(aggregate));.)
   		.
   		
 component_instantiation_statement<out ComponentInstantiationStatement stmt, Identifier label> =
@@ -958,17 +1007,19 @@ generate_statement<out ConcurrentStatement generateStmt, Identifier label> =
 		.
 	
 for_generate_statement<out ForGenerateStatement forGenerateStmt, Identifier label> =
+		(.Position pos=toPosition(la);.)
 		FOR identifier<out loopIdentifier> IN discrete_range<out discreteRange> GENERATE
 			generate_statement_body<out body>
 		END_TOKEN GENERATE [identifier<out end_generate_label>] SEMICOLON
-		(.forGenerateStmt=new ForGenerateStatement(toPosition($FOR),label,loopIdentifier,discreteRange,$body.blockItems,$body.statementList,end_generate_label);.)
+		(.forGenerateStmt=new ForGenerateStatement(pos,label,loopIdentifier,discreteRange,$body.blockItems,$body.statementList,end_generate_label);.)
 		.
 		
 if_generate_statement<out IfGenerateStatement ifGenerateStmt, Identifier label> =
+		(.Position pos=toPosition(la);.)
 		IF_TOKEN condition<out expr> GENERATE
 			generate_statement_body<out body>
 		END_TOKEN GENERATE [identifier<out end_generate_label>] SEMICOLON
-		(.ifGenerateStmt=new IfGenerateStatement(toPosition($IF),label,expr,body._1,body._2,end_generate_label);.)
+		(.ifGenerateStmt=new IfGenerateStatement(pos,label,expr,body._1,body._2,end_generate_label);.)
 		.
 		
 generate_statement_body<out Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>> statementList> =
@@ -1011,18 +1062,21 @@ sequential_statement<out SequentialStatement stmt> =
 		.
 	
 wait_statement<out WaitStatement waitStmt, Identifier label> =	
+		(.Position pos=toPosition(la);.)
 		WAIT [ON name_list<out name_list>] [UNTIL condition<out untilExpr>] [FOR expression<out forExpression>] SEMICOLON
-		(.waitStmt=new WaitStatement(toPosition($WAIT),label,name_list,untilExpr,forExpression);.)
+		(.waitStmt=new WaitStatement(pos,label,name_list,untilExpr,forExpression);.)
 		.
 				
 assertion_statement<out AssertStatement assertStmt, Identifier label> =
+		(.Position pos=toPosition(la);.)
 		ASSERT condition<out expr> [REPORT expression<out report_expression>] [SEVERITY expression<out severity_expression>] SEMICOLON
-		(.assertStmt=new AssertStatement(toPosition($ASSERT),label,expr,report_expression,severity_expression);.)
+		(.assertStmt=new AssertStatement(pos,label,expr,report_expression,severity_expression);.)
 		.
 			     
 report_statement<out ReportStatement reportStmt, Identifier label> =
+		(.Position pos=toPosition(la);.)
 		REPORT expression<out report_expression> [SEVERITY expression<out severity_expression>] SEMICOLON
-		(.reportStmt=new ReportStatement(toPosition($REPORT),label,report_expression,severity_expression);.)
+		(.reportStmt=new ReportStatement(pos,label,report_expression,severity_expression);.)
 		.	
 		     
 signal_assignment_statement<out SignalAssignmentStatement signalAssignStmt, Identifier label> =
@@ -1062,7 +1116,10 @@ procedure_call_statement<out ProcedureCallStatement procedureCallStmt, Identifie
 		.
 	
 if_statement<out IfStatement ifStmt, Identifier label> =
-		(. ListBuffer<IfStatement.IfThenPart> ifList=new ListBuffer<IfStatement.IfThenPart>(); .)
+		(.
+		   Position pos=toPosition(la); 
+		   ListBuffer<IfStatement.IfThenPart> ifList=new ListBuffer<IfStatement.IfThenPart>(); 
+		.)
 		IF_TOKEN condition<out if_condition> THEN
 			sequential_statement_list<out if_sequential_statement> (.ifList.append(new IfStatement.IfThenPart(if_condition,if_sequential_statement));.)
 		{ELSIF condition<out elsif_condition> THEN
@@ -1072,54 +1129,60 @@ if_statement<out IfStatement ifStmt, Identifier label> =
 		[ELSE	
 			sequential_statement_list<out else_sequential_statement>]
 		END_TOKEN IF_TOKEN [identifier<out end_if_label>] SEMICOLON 
-		(.ifStmt=new IfStatement(toPosition($ifToken),label,ifList.toList(),else_sequential_statement,end_if_label);.)
+		(.ifStmt=new IfStatement(pos,label,ifList.toList(),else_sequential_statement,end_if_label);.)
 		.
 
 case_statement<out CaseStatement caseStmt,Identifier label> =
-		(. ListBuffer<CaseStatement.When> alternatives=new ListBuffer<CaseStatement.When>(); .)
+		(. 
+		   Position pos=toPosition(la);
+		   ListBuffer<CaseStatement.When> alternatives=new ListBuffer<CaseStatement.When>(); 
+		.)
 		CASE expression<out expr> IS
 			{WHEN choices<out choices> ARROW sequential_statement_list<out sequentialStatements> (.alternatives.append(new CaseStatement.When(choices,sequentialStatements));.)} //TODO + statt *
 		END_TOKEN CASE  [identifier<out end_case_label>] SEMICOLON
-		(.caseStmt=new CaseStatement(toPosition($caseToken),label,expr,alternatives.toList(),end_case_label);.)
+		(.caseStmt=new CaseStatement(pos,label,expr,alternatives.toList(),end_case_label);.)
 		.
 
 iteration_scheme<out Either<Expression,Tuple2<Identifier,DiscreteRange>> scheme> =
-		WHILE condition<out expr> (.scheme=Left(expr);.)
-		| FOR identifier<out identifier> IN discrete_range<out discreteRange> (.scheme=Right(Tuple2(identifier,discreteRange));.)
+		WHILE condition<out expr> (.scheme=new Left(expr);.)
+		| FOR identifier<out identifier> IN discrete_range<out discreteRange> (.scheme=new Right(new Tuple2(identifier,discreteRange));.)
 		.	
 			
 loop_statement<out SequentialStatement loopStmt, Identifier label> =
-		(. Token firstToken=la;.)
+		(.Position pos=toPosition(la);.)
 		[iteration_scheme<out stmtType>] LOOP
 			sequential_statement_list<out sequentialStatements>
 		END_TOKEN LOOP [identifier<out end_loop_label>] SEMICOLON
 		(.		
-			Position position=toPosition(firstToken);
 			if (stmtType!=null){
-				if (stmtType instanceof Left) loopStmt=new WhileStatement(position,label,((Left)stmtType).a,sequentialStatements,end_loop_label);
-				//TODO case Right((identifier,discreteRange)) =>new ForStatement(position,label,identifier,discreteRange,sequentialStatements,end_loop_label.id);
-			}else loopStmt=new LoopStatement(position,label,sequentialStatements,end_loop_label.id);
+				if (stmtType instanceof Left) loopStmt=new WhileStatement(pos,label,((Left)stmtType).a,sequentialStatements,end_loop_label);
+				//TODO case Right((identifier,discreteRange)) =>new ForStatement(pos,label,identifier,discreteRange,sequentialStatements,end_loop_label.id);
+			}else loopStmt=new LoopStatement(pos,label,sequentialStatements,end_loop_label.id);
 		.)
 		.
 
 next_statement<out NextStatement nextStmt,Identifier label> =
+		(.Position pos=toPosition(la);.)
 		NEXT [identifier<out identifier>] [WHEN condition<out expr>] SEMICOLON 
-		(.nextStmt=new NextStatement(toPosition($NEXT),label,identifier,expr);.)
+		(.nextStmt=new NextStatement(pos,label,identifier,expr);.)
 		.
 
 exit_statement<out ExitStatement exitStmt, Identifier label> =
+		(.Position pos=toPosition(la);.)
 		EXIT [identifier<out identifier>] [WHEN condition<out expr>] SEMICOLON 
-		(.exitStmt=new ExitStatement(toPosition($EXIT),label,identifier,expr);.)
+		(.exitStmt=new ExitStatement(pos,label,identifier,expr);.)
 		.
 
 return_statement<out ReturnStatement returnStmt, Identifier label> =
+		(.Position pos=toPosition(la);.)
 		RETURN [expression<out expr>] SEMICOLON 
-		(.returnStmt=new ReturnStatement(toPosition($RETURN),label,expr);.)
+		(.returnStmt=new ReturnStatement(pos,label,expr);.)
 		.
 	
 null_statement<out NullStatement nullStmt, Identifier label> =
+		(.Position pos=toPosition(la);.)
 		NULL SEMICOLON
-		(.nullStmt=new NullStatement(toPosition($NULL),label);.)
+		(.nullStmt=new NullStatement(pos,label);.)
 		.
 		
 interface_element_procedure<out InterfaceList.AbstractInterfaceElement element> =
@@ -1246,7 +1309,8 @@ shift_expression<out Expression shiftExpr> =
     .
 
 shift_operator<out Tuple2<ShiftExpression.Operator.Value,Position> op> =
-(.  ShiftExpression.Operator.Value shiftOp=null;
+(.  
+    ShiftExpression.Operator.Value shiftOp=null;
 	Position pos=toPosition(la);
 .)
 		SLL  (.shiftOp=ShiftExpression.Operator.SLL;.)
@@ -1265,7 +1329,8 @@ simple_expression<out Expression simpleExpr> =
 	  .
 
 sign<out Tuple2<SimpleExpression.SignOperator.Value,Position> op> =
-(.  SimpleExpression.SignOperator.Value signOp=null;
+(.  
+    SimpleExpression.SignOperator.Value signOp=null;
 	Position pos=toPosition(la);
 .)
 		PLUS (.signOp=SimpleExpression.SignOperator.PLUS;.)
@@ -1274,7 +1339,8 @@ sign<out Tuple2<SimpleExpression.SignOperator.Value,Position> op> =
 		.	
 		
 adding_operator<out Tuple2<SimpleExpression.AddOperator.Value,Position> op> =
-(.  SimpleExpression.AddOperator.Value addOp=null;
+(.  
+    SimpleExpression.AddOperator.Value addOp=null;
 	Position pos=toPosition(la);
 .)
 		PLUS (.addOp=SimpleExpression.AddOperator.PLUS;.)
@@ -1318,9 +1384,10 @@ primary<out Expression p> =
 	.
 
 allocator<out Expression newExpression> =
+	(.Position pos=toPosition(la);.)
 	NEW selected_name<out selectedName>  
-	 	( qualified_expression<out expr,selectedName> (.newExpression=new NewExpression(toPosition($NEW),Left(expr));.)
-	 	| [index_constraint<out constraint>] (.newExpression=new NewExpression(toPosition($NEW),Right(new SubTypeIndication(None,$selected_name.name_,Right(ranges))));.)
+	 	( qualified_expression<out expr,selectedName> (.newExpression=new NewExpression(pos,new Left(expr));.)
+	 	| [index_constraint<out constraint>] (.newExpression=new NewExpression(pos,new Right(new SubTypeIndication(None,selectedName,new Right(ranges))));.)
 	 	)
 	 	.
 
@@ -1462,8 +1529,8 @@ choice	returns [Choices.Choice choice_]
 	val firstToken=la
 }
 	:	
-		(simple_expression direction)=> d=discrete_range {choice_ =new Choices.Choice(toPosition(firstToken),Some(Left($d.discreteRange)))}
-		| expr=simple_expression {choice_ =new Choices.Choice(toPosition(firstToken),Some(Right($expr.simpleExpr)))}
+		(simple_expression direction)=> d=discrete_range {choice_ =new Choices.Choice(toPosition(firstToken),Some(new Left($d.discreteRange)))}
+		| expr=simple_expression {choice_ =new Choices.Choice(toPosition(firstToken),Some(new Right($expr.simpleExpr)))}
 		| OTHERS {choice_ =new Choices.Choice(toPosition(firstToken),None)}
 		;
 */

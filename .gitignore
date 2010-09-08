@@ -10,3 +10,4 @@ target/
 *.iws
 *~
 ! .gitkeep
+trace.txt

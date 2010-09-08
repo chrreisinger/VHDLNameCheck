@@ -19,7 +19,6 @@
 package at.jku.ssw.openvc.ast {
 
 import at.jku.ssw.openvc.ast.expressions.Expression
-import at.jku.ssw.openvc.ast.ams.SubNatureIndication
 import declarations.UseClause
 
 object Position {
@@ -161,31 +160,24 @@ object InterfaceList {
 
   abstract sealed class AbstractInterfaceElement extends Locatable {
     val identifierList: Seq[Identifier]
-    var expression: Option[Expression] //TODO remove var
+    val expression: Option[Expression]
     val interfaceMode: Option[InterfaceMode]
     val subType: SubTypeIndication
     val position = identifierList.head.position
   }
-  final case class InterfaceConstantDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication, var expression: Option[Expression]) extends AbstractInterfaceElement {
+  final case class InterfaceConstantDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication, val expression: Option[Expression]) extends AbstractInterfaceElement {
     val interfaceMode = Some(InterfaceMode.IN)
   }
 
-  final case class InterfaceVariableDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, var expression: Option[Expression]) extends AbstractInterfaceElement
+  final case class InterfaceVariableDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, val expression: Option[Expression]) extends AbstractInterfaceElement
 
-  final case class InterfaceSignalDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, bus: Boolean, var expression: Option[Expression]) extends AbstractInterfaceElement
+  final case class InterfaceSignalDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, bus: Boolean, val expression: Option[Expression]) extends AbstractInterfaceElement
 
   final case class InterfaceFileDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication) extends AbstractInterfaceElement {
-    var expression: Option[Expression] = None
+    val expression: Option[Expression] = None
     val interfaceMode = Some(InterfaceMode.IN)
   }
 
-  final case class InterfaceTerminalDeclaration(identifierList: Seq[Identifier], subNature: SubNatureIndication) extends AbstractInterfaceElement {
-    var expression: Option[Expression] = None
-    val interfaceMode = Some(InterfaceMode.IN)
-    val subType = null
-  }
-
-  final case class InterfaceQuantityDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, var expression: Option[Expression]) extends AbstractInterfaceElement
 }
 final class InterfaceList(val elements: Seq[InterfaceList.AbstractInterfaceElement])
 
@@ -198,7 +190,6 @@ final class ComponentConfiguration(val componentSpecification: AnyRef, val bindi
 package sequentialStatements {
 
 import at.jku.ssw.openvc.ast.expressions._
-import at.jku.ssw.openvc.ast.ams._
 
 abstract sealed class SequentialStatement extends ASTNode
 
@@ -250,14 +241,11 @@ object IfStatement {
 }
 
 final case class IfStatement(position: Position, label: Option[Identifier], ifThenList: Seq[IfStatement.IfThenPart], elseSequentialStatementList: Option[Seq[SequentialStatement]], endLabel: Option[Identifier]) extends SequentialStatement
-
-final case class AMSBreakStatement(position: Position, label: Option[Identifier], elements: Seq[BreakElement], whenExpression: Option[Expression]) extends SequentialStatement
 }
 
 package concurrentStatements {
 
 import at.jku.ssw.openvc.ast.expressions._
-import at.jku.ssw.openvc.ast.ams._
 import at.jku.ssw.openvc.ast.sequentialStatements.SequentialStatement
 
 abstract sealed class ConcurrentStatement extends ASTNode
@@ -312,7 +300,6 @@ final case class BlockStatement(position: Position, label: Option[Identifier], g
                                 genericAssociationList: Option[AssociationList], portInterfaceList: Option[InterfaceList], portAssociationList: Option[AssociationList],
                                 declarativeItems: Seq[DeclarativeItem], statementList: Seq[ConcurrentStatement], endLabel: Option[Identifier]) extends ConcurrentStatement
 
-final case class ConcurrentBreakStatement(position: Position, label: Option[Identifier], breakElements: Option[Seq[BreakElement]], onNameList: Option[Seq[SelectedName]], whenExpression: Option[Expression]) extends ConcurrentStatement
 }
 
 package declarations {
@@ -463,70 +450,5 @@ final case class EnumerationTypeDefinition(position: Position, identifier: Ident
 final case class ProtectedTypeBodyDeclaration(position: Position, identifier: Identifier, declarativeItems: Seq[DeclarativeItem], endIdentifier: Option[Identifier]) extends AbstractTypeDeclaration
 
 final case class ProtectedTypeDeclaration(position: Position, identifier: Identifier, declarativeItems: Seq[DeclarativeItem], endIdentifier: Option[Identifier]) extends AbstractTypeDeclaration
-}
-
-package ams {
-
-import at.jku.ssw.openvc.ast.sequentialStatements._
-import at.jku.ssw.openvc.ast.expressions._
-import at.jku.ssw.openvc.ast.declarations.AbstractTypeDeclaration
-import at.jku.ssw.openvc.ast.concurrentStatements.ConcurrentStatement
-
-abstract sealed class SimultaneousStatement extends ConcurrentStatement
-
-final case class SimultaneousNullStatement(position: Position, label: Option[Identifier]) extends SimultaneousStatement
-
-final case class SimpleSimultaneousStatement(label: Option[Identifier], firstExpression: Expression, secondExpression: Expression, toleranceExpression: Option[Expression]) extends SimultaneousStatement {
-  val position = firstExpression.position
-}
-
-final case class SimultaneousProceduralStatement(position: Position, label: Option[Identifier], declarativeItems: Seq[DeclarativeItem], sequentialStatementList: Seq[SequentialStatement], endLabel: Option[Identifier]) extends SimultaneousStatement
-
-object SimultaneousCaseStatement {
-  final class When(val choices: Choices, val statements: Seq[SimultaneousStatement])
-}
-final case class SimultaneousCaseStatement(position: Position, label: Option[Identifier], expression: Expression, alternatives: Seq[SimultaneousCaseStatement.When], endLabel: Option[Identifier]) extends SimultaneousStatement
-
-object SimultaneousIfStatement {
-  final class IfUsePart(val condition: Expression, val statements: Seq[SimultaneousStatement])
-}
-final case class SimultaneousIfStatement(position: Position, label: Option[Identifier], ifUseList: Seq[SimultaneousIfStatement.IfUsePart],
-                                         elseSimultaneousStatementList: Option[Seq[SimultaneousStatement]], endLabel: Option[Identifier]) extends SimultaneousStatement
-
-final case class TerminalDeclaration(position: Position, identifierList: Seq[Identifier], subNature: SubNatureIndication) extends DeclarativeItem
-
-final case class SubNatureIndication(natureMark: SelectedName, ranges: Option[Seq[DiscreteRange]], toleranceExpression: Option[Expression], acrossExpression: Option[Expression])
-
-final case class SubNatureDeclaration(position: Position, identifier: Identifier, subNature: SubNatureIndication) extends DeclarativeItem
-
-final case class ScalarNatureDefinition(position: Position, identifier: Identifier, typeName: SelectedName, acrossType: SelectedName, throughIdentifier: Identifier) extends AbstractTypeDeclaration
-
-abstract sealed class AbstractArrayNatureTypeDefinition extends AbstractTypeDeclaration {
-  val subNature: SubNatureIndication
-}
-
-final case class UnconstrainedArrayNatureTypeDefinition(position: Position, identifier: Identifier, dimensions: Seq[SelectedName], subNature: SubNatureIndication) extends AbstractArrayNatureTypeDefinition
-
-final case class ConstrainedArrayNatureTypeDefinition(position: Position, identifier: Identifier, dimensions: Seq[DiscreteRange], subNature: SubNatureIndication) extends AbstractArrayNatureTypeDefinition
-
-object RecordNatureDefinition {
-  final class Element(val identifierList: Seq[Identifier], val subNature: SubNatureIndication)
-}
-final case class RecordNatureDefinition(position: Position, identifier: Identifier, elements: Seq[RecordNatureDefinition.Element], endIdentifier: Option[Identifier]) extends AbstractTypeDeclaration
-
-final class BreakElement(val forQuantityName: Option[Name], val name: Name, val expression: Expression)
-
-final case class StepLimitSpecification(position: Position, signalListOrIdentifier: Either[Seq[SelectedName], Identifier], typeName: SelectedName, withExpression: Expression) extends DeclarativeItem
-
-abstract sealed class AbstractQuantityDeclaration extends DeclarativeItem
-
-final case class FreeQuantityDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, expression: Option[Expression]) extends AbstractQuantityDeclaration
-
-final case class BranchQuantityDeclaration(position: Position, acrossIdentifierList: Option[Seq[Identifier]], acrossToleranceExpression: Option[Expression], acrossExpression: Option[Expression],
-                                           throughIdentifierList: Option[Seq[Identifier]], throughToleranceExpression: Option[Expression], throughExpression: Option[Expression],
-                                           terminalPlusName: Name, terminalMinusName: Option[Name]) extends AbstractQuantityDeclaration
-
-final case class SourceQuantityDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, spectrumMagnitudeExpression: Expression,
-                                           spectrumPhaseExpression: Expression, noiseExpression: Expression) extends AbstractQuantityDeclaration
 }
 }
