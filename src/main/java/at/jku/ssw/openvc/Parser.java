@@ -181,7 +181,19 @@ boolean IsAttributeDeclaration() {
 
 private Position toPosition(Token token){
  return new Position(token.line,token.col);
-}       
+}    
+
+private Position toIdentifier(Token token){
+	return toIdentifier(token,true);
+}
+
+private Position toIdentifier(Token token,boolean toLowerCase){
+    		if (token.kind!=_STRING_LITERAL && token.kind!=_CHARACTER_LITERAL){
+    			return new Identifier(toPosition(token),toLowerCase?token.val.toLowerCase():token.val.replace("\\\\","\\"));   
+    		}else{
+    			return new Identifier(toPosition(token),token.val);
+    		}
+}      
 /*--------------------------------------------------------------------*/
 
 
@@ -258,8 +270,8 @@ private Position toPosition(Token token){
 
 	DesignUnit  design_unit() {
 		DesignUnit  designUnit;
-		ListBuffer<Identifier> libraries=new Buffer<Identifier>();
-		ListBuffer<UseClause> useClauses=new Buffer<UseClause>();
+		ListBuffer<Identifier> libraries=new ListBuffer<Identifier>();
+		ListBuffer<UseClause> useClauses=new ListBuffer<UseClause>();
 		//val firstToken=la
 		
 		while (la.kind == 48 || la.kind == 98) {
@@ -278,11 +290,9 @@ private Position toPosition(Token token){
 
 	Seq<Identifier>  library_clause() {
 		Seq<Identifier>  identifierList;
-		identifierList=Seq(); 
 		Expect(48);
-		list = identifier_list();
+		identifierList = identifier_list();
 		Expect(114);
-		identifierList=list; 
 		return identifierList;
 	}
 
@@ -299,20 +309,16 @@ private Position toPosition(Token token){
 	LibraryUnit  library_unit() {
 		LibraryUnit  libraryUnit;
 		if (la.kind == 32) {
-			entityDecl = entity_declaration();
-			libraryUnit=entityDecl;
+			libraryUnit=null;
+			libraryUnit = entity_declaration();
 		} else if (la.kind == 14) {
-			archDecl = architecture_body();
-			libraryUnit=archDecl;
-		} else if (scanner.Peek()==_BODY) {
-			packageBody = package_body();
-			libraryUnit=packageBody;
+			libraryUnit = architecture_body();
+		} else if (scanner.Peek().kind==_BODY) {
+			libraryUnit = package_body();
 		} else if (la.kind == 66) {
-			packageDecl = package_declaration();
-			libraryUnit=packageDecl;
+			libraryUnit = package_declaration();
 		} else if (la.kind == 25) {
-			configDecl = configuration_declaration();
-			libraryUnit=configDecl;
+			libraryUnit = configuration_declaration();
 		} else SynErr(135);
 		return libraryUnit;
 	}
@@ -450,28 +456,27 @@ private Position toPosition(Token token){
 	Seq<Identifier>  identifier_list() {
 		Seq<Identifier>  list;
 		ListBuffer<Identifier> tmpList=new ListBuffer<Identifier>();
-		list=List();
+		Identifier identifier=null;
 		
-		id1 = identifier();
-		tmpList.append(id1);
+		identifier = identifier();
+		tmpList.append(identifier);
 		while (la.kind == 115) {
 			Get();
-			id2 = identifier();
-			tmpList.append(id2);
+			identifier = identifier();
+			tmpList.append(identifier);
 		}
 		list=tmpList.toList();
 		return list;
 	}
 
 	InterfaceList  generic_clause() {
-		InterfaceList  list;
+		InterfaceList  genericList;
 		Expect(38);
 		Expect(117);
 		genericList = generic_interface_list();
 		Expect(118);
 		Expect(114);
-		list = genericList; 
-		return list;
+		return genericList;
 	}
 
 	InterfaceList  generic_interface_list() {
@@ -508,14 +513,13 @@ private Position toPosition(Token token){
 	}
 
 	InterfaceList  port_clause() {
-		InterfaceList  list;
+		InterfaceList  portList;
 		Expect(67);
 		Expect(117);
 		portList = port_interface_list();
 		Expect(118);
 		Expect(114);
-		list = portList;
-		return list;
+		return portList;
 	}
 
 	InterfaceList  port_interface_list() {
@@ -558,60 +562,47 @@ private Position toPosition(Token token){
 		Identifier  id;
 		if (la.kind == 6) {
 			Get();
-			id=toIdentifier(input.LT(-1));
+			id=toIdentifier(t);
 		} else if (la.kind == 5) {
 			Get();
-			id=toIdentifier(input.LT(-1),false);
+			id=toIdentifier(t,false);
 		} else SynErr(136);
 		return id;
 	}
 
 	DeclarativeItem  entity_declarative_item() {
-		DeclarativeItem  node;
+		DeclarativeItem  item;
 		if (StartOf(8)) {
-			declOrBody = subprogram_declartion_or_body();
-			node=declOrBody;
+			item=null;
+			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
-			typeDecl = type_declaration();
-			node=typeDecl;
+			item = type_declaration();
 		} else if (la.kind == 90) {
-			subTypeDecl = subtype_declaration();
-			node=subTypeDecl;
+			item = subtype_declaration();
 		} else if (la.kind == 26) {
-			constantDecl = constant_declaration();
-			node=constantDecl;
+			item = constant_declaration();
 		} else if (la.kind == 85) {
-			signalDecl = signal_declaration();
-			node=signalDecl; 
+			item = signal_declaration();
 		} else if (la.kind == 84 || la.kind == 99) {
-			varDecl = variable_declaration();
-			node=varDecl; 
+			item = variable_declaration();
 		} else if (la.kind == 34) {
-			fileDecl = file_declaration();
-			node=fileDecl; 
+			item = file_declaration();
 		} else if (la.kind == 11) {
-			aliasDecl = alias_declaration();
-			node=aliasDecl; 
+			item = alias_declaration();
 		} else if (IsAttributeDeclaration()) {
-			attributeDecl = attribute_declaration();
-			node=attributeDecl; 
+			item = attribute_declaration();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else if (la.kind == 27) {
-			disconnectSpec = disconnection_specification();
-			node=disconnectSpec;
+			item = disconnection_specification();
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else if (IsGroupTemplate()) {
-			groupTemplateDecl = group_template_declaration();
-			node=groupTemplateDecl;
+			item = group_template_declaration();
 		} else if (la.kind == 39) {
-			groupDecl = group_declaration();
-			node=groupDecl;
+			item = group_declaration();
 		} else SynErr(137);
-		return node;
+		return item;
 	}
 
 	DeclarativeItem  subprogram_declartion_or_body() {
@@ -844,7 +835,7 @@ private Position toPosition(Token token){
 	SelectedName  selected_name() {
 		SelectedName  name;
 		ListBuffer<Identifier> parts=new ListBuffer<Identifier>();
-		prefix = name_prefix();
+		Identifier prefix = name_prefix();
 		while (la.kind == 130) {
 			selectedPart = name_selected_part();
 			parts.append(selectedPart);
@@ -854,66 +845,50 @@ private Position toPosition(Token token){
 	}
 
 	DeclarativeItem  block_declarative_item() {
-		DeclarativeItem  node;
+		DeclarativeItem  item;
 		if (StartOf(8)) {
-			declOrBody = subprogram_declartion_or_body();
-			node=declOrBody;
+			item=null;
+			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
-			typeDecl = type_declaration();
-			node=typeDecl;
+			item = type_declaration();
 		} else if (la.kind == 90) {
-			subTypeDecl = subtype_declaration();
-			node=subTypeDecl;
+			item = subtype_declaration();
 		} else if (la.kind == 26) {
-			constantDecl = constant_declaration();
-			node=constantDecl;
+			item = constant_declaration();
 		} else if (la.kind == 85) {
-			signalDecl = signal_declaration();
-			node=signalDecl;
+			item = signal_declaration();
 		} else if (la.kind == 84 || la.kind == 99) {
-			varDecl = variable_declaration();
-			node=varDecl; 
+			item = variable_declaration();
 		} else if (la.kind == 34) {
-			fileDecl = file_declaration();
-			node=fileDecl; 
+			item = file_declaration();
 		} else if (la.kind == 11) {
-			aliasDecl = alias_declaration();
-			node=aliasDecl; 
+			item = alias_declaration();
 		} else if (la.kind == 24) {
-			componentDecl = component_declaration();
-			node=componentDecl;
+			item = component_declaration();
 		} else if (IsAttributeDeclaration()) {
-			attributeDecl = attribute_declaration();
-			node=attributeDecl;
+			item = attribute_declaration();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else if (la.kind == 35) {
-			configSpec = configuration_specification();
-			node=configSpec;
+			item = configuration_specification();
 		} else if (la.kind == 27) {
-			disconnectSpec = disconnection_specification();
-			node=disconnectSpec;
+			item = disconnection_specification();
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else if (IsGroupTemplate()) {
-			groupTemplateDecl = group_template_declaration();
-			node=groupTemplateDecl;
+			item = group_template_declaration();
 		} else if (la.kind == 39) {
-			groupDecl = group_declaration();
-			node=groupDecl;
+			item = group_declaration();
 		} else SynErr(140);
-		return node;
+		return item;
 	}
 
 	Seq<ConcurrentStatement>  architecture_statement_list() {
 		Seq<ConcurrentStatement>  list;
 		ListBuffer<ConcurrentStatement> statementList=new ListBuffer<ConcurrentStatement>();
-		list=List();
 		
 		while (StartOf(9)) {
-			stmt = architecture_statement();
+			ConcurrentStatement stmt = architecture_statement();
 			statementList.append(stmt);
 		}
 		list=statementList.toList();
@@ -923,15 +898,13 @@ private Position toPosition(Token token){
 	DeclarativeItem  configuration_declarative_item() {
 		DeclarativeItem  item;
 		if (StartOf(6)) {
+			item=null;
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else if (la.kind == 39) {
-			groupDecl = group_declaration();
-			node=groupDecl;
+			item = group_declaration();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else SynErr(141);
 		return item;
 	}
@@ -939,12 +912,12 @@ private Position toPosition(Token token){
 	BlockConfiguration  block_configuration() {
 		BlockConfiguration  blockConfig;
 		ListBuffer<UseClause> useClauses=new ListBuffer<UseClause>();
-		ListBuffer<AnyRef> configurations=new ListBuffer<AnyRef>();
+		ListBuffer<Object> configurations=new ListBuffer<Object>();
 		
 		Expect(35);
 		block_specification();
 		while (la.kind == 98) {
-			useClause = use_clause();
+			uUseClause seClause = use_clause();
 			useClauses.append(useClause);
 		}
 		while (la.kind == 35) {
@@ -1009,54 +982,40 @@ private Position toPosition(Token token){
 	}
 
 	DeclarativeItem  package_declarative_item() {
-		DeclarativeItem  node;
+		DeclarativeItem  item;
 		if (StartOf(8)) {
-			declOrBody = subprogram_declartion_or_body();
-			node=declOrBody;
+			item=null;
+			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
-			typeDecl = type_declaration();
-			node=typeDecl;
+			item = type_declaration();
 		} else if (la.kind == 90) {
-			subTypeDecl = subtype_declaration();
-			node=subTypeDecl;
+			item = subtype_declaration();
 		} else if (la.kind == 26) {
-			constantDecl = constant_declaration();
-			node=constantDecl;
+			item = constant_declaration();
 		} else if (la.kind == 85) {
-			signalDecl = signal_declaration();
-			node=signalDecl; 
+			item = signal_declaration();
 		} else if (la.kind == 84 || la.kind == 99) {
-			varDecl = variable_declaration();
-			node=varDecl; 
+			item = variable_declaration();
 		} else if (la.kind == 34) {
-			fileDecl = file_declaration();
-			node=fileDecl; 
+			item = file_declaration();
 		} else if (la.kind == 11) {
-			aliasDecl = alias_declaration();
-			node=aliasDecl; 
+			item = alias_declaration();
 		} else if (la.kind == 24) {
-			componentDecl = component_declaration();
-			node=componentDecl;
+			item = component_declaration();
 		} else if (IsAttributeDeclaration()) {
-			attributeDecl = attribute_declaration();
-			node=attributeDecl; 
+			item = attribute_declaration();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else if (la.kind == 27) {
-			disconnectSpec = disconnection_specification();
-			node=disconnectSpec;
+			item = disconnection_specification();
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else if (IsGroupTemplate()) {
-			groupTemplateDecl = group_template_declaration();
-			node=groupTemplateDecl;
+			item = group_template_declaration();
 		} else if (la.kind == 39) {
-			groupDecl = group_declaration();
-			node=groupDecl;
+			item = group_declaration();
 		} else SynErr(142);
-		return node;
+		return item;
 	}
 
 	ComponentDeclaration  component_declaration() {
@@ -1080,45 +1039,34 @@ private Position toPosition(Token token){
 	}
 
 	DeclarativeItem  package_body_declarative_item() {
-		DeclarativeItem  node;
+		DeclarativeItem  item;
 		if (StartOf(8)) {
-			declOrBody = subprogram_declartion_or_body();
-			node=declOrBody;
+			item=null;
+			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
-			typeDecl = type_declaration();
-			node=typeDecl;
+			item = type_declaration();
 		} else if (la.kind == 90) {
-			subTypeDecl = subtype_declaration();
-			node=subTypeDecl;
+			item = subtype_declaration();
 		} else if (la.kind == 26) {
-			constantDecl = constant_declaration();
-			node=constantDecl;
+			item = constant_declaration();
 		} else if (la.kind == 85) {
-			signalDecl = signal_declaration();
-			node=signalDecl; 
+			item = signal_declaration();
 		} else if (la.kind == 84 || la.kind == 99) {
-			varDecl = variable_declaration();
-			node=varDecl; 
+			item = variable_declaration();
 		} else if (la.kind == 34) {
-			fileDecl = file_declaration();
-			node=fileDecl; 
+			item = file_declaration();
 		} else if (la.kind == 11) {
-			aliasDecl = alias_declaration();
-			node=aliasDecl; 
+			item = alias_declaration();
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else if (IsGroupTemplate()) {
-			groupTemplateDecl = group_template_declaration();
-			node=groupTemplateDecl;
+			item = group_template_declaration();
 		} else if (la.kind == 39) {
-			groupDecl = group_declaration();
-			node=groupDecl;
+			item = group_declaration();
 		} else SynErr(143);
-		return node;
+		return item;
 	}
 
 	Identifier  designator() {
@@ -1170,12 +1118,14 @@ private Position toPosition(Token token){
 	InterfaceList  parameter_interface_list_procedure() {
 		InterfaceList  list;
 		ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();
-		e1 = interface_element_procedure();
-		elements.append(e1);
+		InterfaceList.AbstractInterfaceElement element=null;
+		
+		element = interface_element_procedure();
+		elements.append(element);
 		while (la.kind == 114) {
 			Get();
-			e2 = interface_element_procedure();
-			elements.append(e2);
+			element = interface_element_procedure();
+			elements.append(element);
 		}
 		list=new InterfaceList(elements.toList());
 		return list;
@@ -1184,12 +1134,14 @@ private Position toPosition(Token token){
 	InterfaceList  parameter_interface_list_function() {
 		InterfaceList  list;
 		ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();
-		e1 = interface_element_function();
-		elements.append(e1);
+		InterfaceList.AbstractInterfaceElement element=null;
+		
+		element = interface_element_function();
+		elements.append(element);
 		while (la.kind == 114) {
 			Get();
 			e2 = interface_element_function();
-			elements.append(e2);
+			elements.append(elements);
 		}
 		list=new InterfaceList(elements.toList());
 		return list;
@@ -1243,54 +1195,42 @@ private Position toPosition(Token token){
 	}
 
 	DeclarativeItem  subprogram_declarative_item() {
-		DeclarativeItem  node;
+		DeclarativeItem  item;
 		if (StartOf(8)) {
-			declOrBody = subprogram_declartion_or_body();
-			node=declOrBody;
+			item=null;
+			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
-			typeDecl = type_declaration();
-			node=typeDecl;
+			item = type_declaration();
 		} else if (la.kind == 90) {
-			subTypeDecl = subtype_declaration();
-			node=subTypeDecl;
+			item = subtype_declaration();
 		} else if (la.kind == 26) {
-			constantDecl = constant_declaration();
-			node=constantDecl;
+			item = constant_declaration();
 		} else if (la.kind == 84 || la.kind == 99) {
-			varDecl = variable_declaration();
-			node=varDecl; 
+			item = variable_declaration();
 		} else if (la.kind == 34) {
-			fileDecl = file_declaration();
-			node=fileDecl; 
+			item = file_declaration();
 		} else if (la.kind == 11) {
-			aliasDecl = alias_declaration();
-			node=aliasDecl; 
+			item = alias_declaration();
 		} else if (IsAttributeDeclaration()) {
-			attributeDecl = attribute_declaration();
-			node=attributeDecl;
+			item = attribute_declaration();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else if (IsGroupTemplate()) {
-			groupTemplateDecl = group_template_declaration();
-			node=groupTemplateDecl;
+			item = group_template_declaration();
 		} else if (la.kind == 39) {
-			groupDecl = group_declaration();
-			node=groupDecl;
+			item = group_declaration();
 		} else SynErr(146);
-		return node;
+		return item;
 	}
 
 	Seq<SequentialStatement>  sequential_statement_list() {
 		Seq<SequentialStatement>  list;
 		ListBuffer<SequentialStatement> tmpList=new ListBuffer<SequentialStatement>();
-		list=List();
 		
 		while (StartOf(12)) {
-			stmt = sequential_statement();
+			SequentialStatement stmt = sequential_statement();
 			tmpList.append(stmt);
 		}
 		list=tmpList.toList();
@@ -1300,29 +1240,22 @@ private Position toPosition(Token token){
 	AbstractTypeDeclaration  type_definition(Identifier id,Position pos) {
 		AbstractTypeDeclaration  typeDef;
 		if (la.kind == 117) {
-			enumTypeDef = enumeration_type_definition(id,pos);
-			typeDef=enumTypeDef; 
+			typeDef=null;
+			typeDef = enumeration_type_definition(id,pos);
 		} else if (la.kind == 73) {
-			intOrFloat = integer_or_floating_point_type_definition(id,pos);
-			typeDef=intOrFloat;
+			typeDef = integer_or_floating_point_type_definition(id,pos);
 		} else if (la.kind == 15) {
-			arrayTypeDef = array_type_definition(id,pos);
-			typeDef=arrayTypeDef;
+			typeDef = array_type_definition(id,pos);
 		} else if (la.kind == 74) {
-			recordTypeDef = record_type_definition(id,pos);
-			typeDef=recordTypeDef;
+			typeDef = record_type_definition(id,pos);
 		} else if (la.kind == 9) {
-			accessTypeDef = access_type_definition(id,pos);
-			typeDef=accessTypeDef;
+			typeDef = access_type_definition(id,pos);
 		} else if (la.kind == 34) {
-			fileTypeDef = file_type_definition(id,pos);
-			typeDef=fileTypeDef;
-		} else if (scanner.Peek()==_BODY) {
-			protectedTypeBody = protected_type_body(id,pos);
-			typeDef=protectedTypeBody;
+			typeDef = file_type_definition(id,pos);
+		} else if (scanner.Peek().kind==_BODY) {
+			typeDef = protected_type_body(id,pos);
 		} else if (la.kind == 71) {
-			protectedTypeDecl = protected_type_declaration(id,pos);
-			typeDef=protectedTypeDecl;
+			typeDef = protected_type_declaration(id,pos);
 		} else SynErr(147);
 		return typeDef;
 	}
@@ -1330,13 +1263,15 @@ private Position toPosition(Token token){
 	EnumerationTypeDefinition  enumeration_type_definition(Identifier id,Position pos) {
 		EnumerationTypeDefinition  enumTypeDef;
 		ListBuffer<Identifier> elements=new ListBuffer<Identifier>(); 
+		Identifier element=null;
+		
 		Expect(117);
-		e1 = enumeration_literal();
-		elements.append(e1);
+		element = enumeration_literal();
+		elements.append(element);
 		while (la.kind == 115) {
 			Get();
-			e2 = enumeration_literal();
-			elements.append(e2);
+			element = enumeration_literal();
+			elements.append(element);
 		}
 		Expect(118);
 		enumTypeDef=new EnumerationTypeDefinition(pos,id,elements.toList());
@@ -1355,7 +1290,7 @@ private Position toPosition(Token token){
 		AbstractArrayTypeDefinition  arrayTypeDef;
 		ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>(); 
 		Expect(15);
-		if (unConstraintList.isEmpty) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,$index_constraint.ranges,$subType.subType);
+		if (unConstraintList.isEmpty()) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,$index_constraint.ranges,$subType.subType);
 		else arrayTypeDef=new UnconstrainedArrayTypeDefinition(pos,id,unConstraintList.toList(),$subType.subType);
 		
 		return arrayTypeDef;
@@ -1384,7 +1319,7 @@ private Position toPosition(Token token){
 	AccessTypeDefinition  access_type_definition(Identifier id,Position pos) {
 		AccessTypeDefinition  accessTypeDef;
 		Expect(9);
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		accessTypeDef=new AccessTypeDefinition(pos,id,subType);
 		return accessTypeDef;
 	}
@@ -1393,7 +1328,7 @@ private Position toPosition(Token token){
 		FileTypeDefinition  fileTypeDef;
 		Expect(34);
 		Expect(60);
-		type = type_mark();
+		SelectedName type = type_mark();
 		fileTypeDef=new FileTypeDefinition(pos,id,type);
 		return fileTypeDef;
 	}
@@ -1451,35 +1386,33 @@ private Position toPosition(Token token){
 
 	Expression  expression() {
 		Expression  expr;
-		r2 = relation();
-		expr=r1;
+		expr = relation();
 		while (StartOf(14)) {
 			op = logical_operator();
-			r2 = relation();
-			expr=new LogicalExpression(op._1,expr,op._2,r2);
+			Expression right = relation();
+			expr=new LogicalExpression(op._1,expr,op._2,right);
 		}
 		return expr;
 	}
 
 	Identifier  alias_designator() {
-		Identifier  id;
+		Identifier  identifier;
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
-			id=identifier;
 		} else if (la.kind == 4) {
 			Get();
-			id=toIdentifier(t);
+			identifier=toIdentifier(t);
 		} else if (la.kind == 7) {
 			Get();
-			id=toIdentifier(t);
+			identifier=toIdentifier(t);
 		} else SynErr(148);
-		return id;
+		return identifier;
 	}
 
 	Name  name() {
 		Name  name;
 		ListBuffer<Name.Part> parts=new ListBuffer<Name.Part>();
-		prefix = name_prefix();
+		Identifier prefix = name_prefix();
 		name =new Name(prefix,parts.toList());
 		return name;
 	}
@@ -1502,7 +1435,7 @@ private Position toPosition(Token token){
 	Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>  entity_name_list() {
 		Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>  list;
 		if (StartOf(15)) {
-			elements=new ListBuffer<Tuple2<Identifier,Option<Signature>>>(); 
+			ListBuffer<Tuple2<Identifier,Option<Signature>>> elements=new ListBuffer<Tuple2<Identifier,Option<Signature>>>(); 
 			designator = entity_designator();
 			elements.append(designator); 
 			while (la.kind == 115) {
@@ -1678,38 +1611,36 @@ private Position toPosition(Token token){
 	}
 
 	AssociationList  generic_map_aspect() {
-		AssociationList  list;
+		AssociationList  associationList;
 		Expect(38);
 		Expect(52);
 		Expect(117);
 		associationList = association_list();
 		Expect(118);
-		list=associationList; 
-		return list;
+		return associationList;
 	}
 
 	AssociationList  port_map_aspect() {
-		AssociationList  list;
+		AssociationList  associationList;
 		Expect(67);
 		Expect(52);
 		Expect(117);
 		associationList = association_list();
 		Expect(118);
-		list=associationList; 
-		return list;
+		return associationList;
 	}
 
 	Seq<SelectedName>  selected_name_list() {
 		Seq<SelectedName>  list;
 		ListBuffer<SelectedName> tmpList=new ListBuffer<SelectedName>();
-		list=List();
+		SelectedName name;
 		
-		n1 = selected_name();
-		tmpList.append(n1);
+		name = selected_name();
+		tmpList.append(name);
 		while (la.kind == 115) {
 			Get();
-			n2 = selected_name();
-			tmpList.append(n2);
+			name = selected_name();
+			tmpList.append(name);
 		}
 		list=tmpList.toList();
 		return list;
@@ -1728,12 +1659,14 @@ private Position toPosition(Token token){
 	Seq<Either<Name,Identifier>>  group_constituent_list() {
 		Seq<Either<Name,Identifier>>  list;
 		ListBuffer<Either<Name,Identifier>> elements=new ListBuffer<Either<Name,Identifier>>(); 
-		c1 = group_constituent();
-		elements.append(c1); 
+		Either<Name,Identifier> element=null;
+		
+		element = group_constituent();
+		elements.append(element); 
 		while (la.kind == 115) {
 			Get();
-			c2 = group_constituent();
-			elements.append(c2);
+			element = group_constituent();
+			elements.append(element);
 		}
 		list=elements.toList();
 		return list;
@@ -1801,68 +1734,53 @@ private Position toPosition(Token token){
 
 	SelectedName  index_subtype_definition() {
 		SelectedName  typeMark;
-		type = type_mark();
+		typeMark = type_mark();
 		Expect(73);
 		Expect(112);
-		typeMark=type;
 		return typeMark;
 	}
 
 	DeclarativeItem  protected_type_declarative_item() {
-		DeclarativeItem  node;
+		DeclarativeItem  item;
 		if (StartOf(8)) {
-			declOrBody = subprogram_declartion_or_body();
-			node=declOrBody;
+			item = subprogram_declartion_or_body();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else SynErr(156);
-		return node;
+		return item;
 	}
 
 	DeclarativeItem  protected_type_body_declarative_item() {
-		DeclarativeItem  node;
+		DeclarativeItem  item;
 		if (StartOf(8)) {
-			declOrBody = subprogram_declartion_or_body();
-			node=declOrBody;
+			item=null;
+			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
-			typeDecl = type_declaration();
-			node=typeDecl;
+			item = type_declaration();
 		} else if (la.kind == 90) {
-			subTypeDecl = subtype_declaration();
-			node=subTypeDecl;
+			item = subtype_declaration();
 		} else if (la.kind == 26) {
-			constantDecl = constant_declaration();
-			node=constantDecl;
+			item = constant_declaration();
 		} else if (la.kind == 84 || la.kind == 99) {
-			varDecl = variable_declaration();
-			node=varDecl; 
+			item = variable_declaration();
 		} else if (la.kind == 34) {
-			fileDecl = file_declaration();
-			node=fileDecl; 
+			item = file_declaration();
 		} else if (la.kind == 11) {
-			aliasDecl = alias_declaration();
-			node=aliasDecl; 
+			item = alias_declaration();
 		} else if (IsAttributeDeclaration()) {
-			attributeDecl = attribute_declaration();
-			node=attributeDecl;
+			item = attribute_declaration();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else if (IsGroupTemplate()) {
-			groupTemplateDecl = group_template_declaration();
-			node=groupTemplateDecl;
+			item = group_template_declaration();
 		} else if (la.kind == 39) {
-			groupDecl = group_declaration();
-			node=groupDecl;
+			item = group_declaration();
 		} else SynErr(157);
-		return node;
+		return item;
 	}
 
 	Either<Range,Seq<DiscreteRange>>  constraint() {
@@ -1899,14 +1817,16 @@ private Position toPosition(Token token){
 
 	Seq<DiscreteRange>  index_constraint() {
 		Seq<DiscreteRange>  ranges;
-		ListBuffer<DiscreteRange> list=new ListBuffer<DiscreteRange>(); 
+		ListBuffer<DiscreteRange> list=new ListBuffer<DiscreteRange>();
+		DiscreteRange discreteRange=null;
+		
 		Expect(117);
-		d1 = discrete_range();
-		list.append(d1);
+		discreteRange = discrete_range();
+		list.append(discreteRange);
 		while (la.kind == 115) {
 			Get();
-			d2 = discrete_range();
-			list.append(d2);
+			discreteRange = discrete_range();
+			list.append(discreteRange);
 		}
 		Expect(118);
 		ranges = list.toList();
@@ -1923,21 +1843,21 @@ private Position toPosition(Token token){
 	ConcurrentStatement  architecture_statement() {
 		ConcurrentStatement  concurrentStmt;
 		if (la.kind == 5 || la.kind == 6) {
+			concurrentStmt=null;
+			Identifier label=null;
+			
 			label = label_colon();
-			stmt = architecture_statement_optional_label(label);
-			concurrentStmt=stmt;
+			concurrentStmt = architecture_statement_optional_label(label);
 		} else if (StartOf(9)) {
-			stmt = architecture_statement_optional_label(label);
-			concurrentStmt=stmt;
+			concurrentStmt = architecture_statement_optional_label(label);
 		} else SynErr(160);
 		return concurrentStmt;
 	}
 
 	Identifier  label_colon() {
 		Identifier  label;
-		id = identifier();
+		label = identifier();
 		Expect(121);
-		label=id;
 		return label;
 	}
 
@@ -1962,14 +1882,11 @@ private Position toPosition(Token token){
 	ConcurrentStatement  architecture_statement_with_label(Identifier label) {
 		ConcurrentStatement  concurrentStmt;
 		if (la.kind == 38 || la.kind == 67 || la.kind == 114) {
-			stmt = component_instantiation_statement(label);
-			concurrentStmt=stmt;
+			concurrentStmt = component_instantiation_statement(label);
 		} else if (la.kind == 19) {
-			stmt = block_statement(label);
-			concurrentStmt=stmt;
+			concurrentStmt = block_statement(label);
 		} else if (la.kind == 35 || la.kind == 41) {
-			stmt = generate_statement(label);
-			concurrentStmt=stmt;
+			concurrentStmt = generate_statement(label);
 		} else SynErr(162);
 		return concurrentStmt;
 	}
@@ -2037,11 +1954,10 @@ private Position toPosition(Token token){
 	ConcurrentStatement  generate_statement(Identifier label) {
 		ConcurrentStatement  generateStmt;
 		if (la.kind == 35) {
-			forGenerateStmt = for_generate_statement(label);
-			generateStmt=forGenerateStmt;
+			generateStmt=null;
+			generateStmt = for_generate_statement(label);
 		} else if (la.kind == 41) {
-			ifGenerateStmt = if_generate_statement(label);
-			generateStmt=ifGenerateStmt;
+			generateStmt = if_generate_statement(label);
 		} else SynErr(163);
 		return generateStmt;
 	}
@@ -2099,7 +2015,7 @@ private Position toPosition(Token token){
 
 	ConcurrentProcedureCallStatement  concurrent_procedure_call_statement(Identifier label,Boolean postponed) {
 		ConcurrentProcedureCallStatement  procedureCallStmt;
-		procedure_name = selected_name();
+		SelectedName procedure_name = selected_name();
 		if (la.kind == 117) {
 			Get();
 			associationList = association_list();
@@ -2113,12 +2029,14 @@ private Position toPosition(Token token){
 	AssociationList  association_list() {
 		AssociationList  list;
 		ListBuffer<AssociationList.Element> elements=new ListBuffer<AssociationList.Element>();
-		e1 = association_element();
-		elements.append(e1);
+		AssociationList.Element element=null;
+		
+		element = association_element();
+		elements.append(element);
 		while (la.kind == 115) {
 			Get();
-			e2 = association_element();
-			elements.append(e2);
+			element = association_element();
+			elements.append(element);
 		}
 		list=new AssociationList(elements.toList());
 		return list;
@@ -2127,7 +2045,6 @@ private Position toPosition(Token token){
 	Seq<Name>  name_list() {
 		Seq<Name>  list;
 		ListBuffer<Name> tmpList=new ListBuffer<Name>();
-		list=List();
 		
 		n1 = name();
 		tmpList.append(n1);
@@ -2141,45 +2058,34 @@ private Position toPosition(Token token){
 	}
 
 	DeclarativeItem  process_declarative_item() {
-		DeclarativeItem  node;
+		DeclarativeItem  item;
 		if (StartOf(8)) {
-			declOrBody = subprogram_declartion_or_body();
-			node=declOrBody;
+			item=null;
+			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
-			typeDecl = type_declaration();
-			node=typeDecl;
+			item = type_declaration();
 		} else if (la.kind == 90) {
-			subTypeDecl = subtype_declaration();
-			node=subTypeDecl;
+			item = subtype_declaration();
 		} else if (la.kind == 26) {
-			constantDecl = constant_declaration();
-			node=constantDecl;
+			item = constant_declaration();
 		} else if (la.kind == 84 || la.kind == 99) {
-			varDecl = variable_declaration();
-			node=varDecl; 
+			item = variable_declaration();
 		} else if (la.kind == 34) {
-			fileDecl = file_declaration();
-			node=fileDecl; 
+			item = file_declaration();
 		} else if (la.kind == 11) {
-			aliasDecl = alias_declaration();
-			node=aliasDecl; 
+			item = alias_declaration();
 		} else if (la.kind == 98) {
-			useClause = use_clause();
-			node=useClause;
+			item = use_clause();
 		} else if (IsAttributeDeclaration()) {
-			attributeDecl = attribute_declaration();
-			node=attributeDecl;
+			item = attribute_declaration();
 		} else if (la.kind == 17) {
-			attributeSpec = attribute_specification();
-			node=attributeSpec.node; 
+			item = attribute_specification();
 		} else if (IsGroupTemplate()) {
-			groupTemplateDecl = group_template_declaration();
-			node=groupTemplateDecl;
+			item = group_template_declaration();
 		} else if (la.kind == 39) {
-			groupDecl = group_declaration();
-			node=groupDecl;
+			item = group_declaration();
 		} else SynErr(164);
-		return node;
+		return item;
 	}
 
 	Expression  condition() {
@@ -2189,13 +2095,11 @@ private Position toPosition(Token token){
 		return con;
 	}
 
-	void concurrent_signal_assignment_statement(ConcurrentSignalAssignmentStatement node, Identifier label,Boolean postponed) {
+	void concurrent_signal_assignment_statement(ConcurrentSignalAssignmentStatement signalAssignmentStatement, Identifier label,Boolean postponed) {
 		if (StartOf(16)) {
-			conditional = conditional_signal_assignment(label,postponed);
-			node=conditional;
+			signalAssignmentStatement = conditional_signal_assignment(label,postponed);
 		} else if (la.kind == 103) {
-			selected = selected_signal_assignment(label,postponed);
-			node=selected;
+			signalAssignmentStatement = selected_signal_assignment(label,postponed);
 		} else SynErr(165);
 	}
 
@@ -2273,7 +2177,7 @@ private Position toPosition(Token token){
 		return mechanism;
 	}
 
-	void conditional_waveforms(ListBuffer elements) {
+	void conditional_waveforms(ListBuffer<Object> elements) {
 		waveform = waveform();
 		if (la.kind == 101) {
 			Get();
@@ -2397,69 +2301,59 @@ private Position toPosition(Token token){
 	}
 
 	SequentialStatement  sequential_statement() {
-		SequentialStatement  stmt;
+		SequentialStatement  sequentialStatement;
+		sequentialStatement=null;
 		if (la.kind == 5 || la.kind == 6) {
 			label = label_colon();
 		}
 		switch (la.kind) {
 		case 100: {
-			waitStmt = wait_statement(label);
-			stmt=waitStmt;
+			sequentialStatement = wait_statement(label);
 			break;
 		}
 		case 16: {
-			assertStmt = assertion_statement(label);
-			stmt=assertStmt;
+			sequentialStatement = assertion_statement(label);
 			break;
 		}
 		case 78: {
-			reportStmt = report_statement(label);
-			stmt=reportStmt;
+			sequentialStatement = report_statement(label);
 			break;
 		}
 		case 41: {
-			ifStmt = if_statement(label);
-			stmt=ifStmt;
+			sequentialStatement = if_statement(label);
 			break;
 		}
 		case 23: {
-			caseStmt = case_statement(label);
-			stmt=caseStmt;
+			sequentialStatement = case_statement(label);
 			break;
 		}
 		case 35: case 51: case 102: {
-			loopStmt = loop_statement(label);
-			stmt=loopStmt;
+			sequentialStatement = loop_statement(label);
 			break;
 		}
 		case 56: {
-			nextStmt = next_statement(label);
-			stmt=nextStmt;
+			sequentialStatement = next_statement(label);
 			break;
 		}
 		case 33: {
-			exitStmt = exit_statement(label);
-			stmt=exitStmt;
+			sequentialStatement = exit_statement(label);
 			break;
 		}
 		case 79: {
-			returnStmt = return_statement(label);
-			stmt=returnStmt;
+			sequentialStatement = return_statement(label);
 			break;
 		}
 		case 59: {
-			nullStmt = null_statement(label);
-			stmt=nullStmt;
+			sequentialStatement = null_statement(label);
 			break;
 		}
 		case 5: case 6: case 7: {
-			procedureCallStmt = procedure_call_statement(label);
-			stmt=procedureCallStmt;
+			sequentialStatement = procedure_call_statement(label);
 			break;
 		}
 		default: SynErr(169); break;
 		}
-		return stmt;
+		return sequentialStatement;
 	}
 
 	WaitStatement  wait_statement(Identifier label) {

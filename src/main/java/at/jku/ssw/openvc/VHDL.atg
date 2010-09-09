@@ -39,7 +39,19 @@ boolean IsAttributeDeclaration() {
 
 private Position toPosition(Token token){
  return new Position(token.line,token.col);
-}       
+}    
+
+private Position toIdentifier(Token token){
+	return toIdentifier(token,true);
+}
+
+private Position toIdentifier(Token token,boolean toLowerCase){
+    		if (token.kind!=_STRING_LITERAL && token.kind!=_CHARACTER_LITERAL){
+    			return new Identifier(toPosition(token),toLowerCase?token.val.toLowerCase():token.val.replace("\\\\","\\"));   
+    		}else{
+    			return new Identifier(toPosition(token),token.val);
+    		}
+}      
 /*--------------------------------------------------------------------*/
 
 
@@ -236,8 +248,8 @@ VHDL<out DesignFile designFile> =
 
 design_unit<out DesignUnit designUnit> =
 (.
-	ListBuffer<Identifier> libraries=new Buffer<Identifier>();
-	ListBuffer<UseClause> useClauses=new Buffer<UseClause>();
+	ListBuffer<Identifier> libraries=new ListBuffer<Identifier>();
+	ListBuffer<UseClause> useClauses=new ListBuffer<UseClause>();
 	//val firstToken=la
 .)
 		{
@@ -248,21 +260,20 @@ design_unit<out DesignUnit designUnit> =
 		.
 
 library_unit<out LibraryUnit libraryUnit> =
-		entity_declaration<out entityDecl>  (.libraryUnit=entityDecl;.)
-		| architecture_body<out archDecl> (.libraryUnit=archDecl;.)
-		| IF(scanner.Peek()==_BODY)package_body<out packageBody> (.libraryUnit=packageBody;.)
-		| package_declaration<out packageDecl> (.libraryUnit=packageDecl;.)
-		| configuration_declaration<out configDecl> (.libraryUnit=configDecl;.)
+		(.libraryUnit=null;.)
+		entity_declaration<out libraryUnit>
+		| architecture_body<out libraryUnit> 
+		| IF(scanner.Peek().kind==_BODY)package_body<out libraryUnit>
+		| package_declaration<out libraryUnit> 
+		| configuration_declaration<out libraryUnit> 
 		.	
 		
 library_clause<out Seq<Identifier> identifierList> =
-	(. identifierList=Seq(); .)
-	LIBRARY identifier_list<out list> SEMICOLON (. identifierList=list; .)
+	LIBRARY identifier_list<out identifierList> SEMICOLON 
 	.
 
-generic_clause<out InterfaceList list> =
+generic_clause<out InterfaceList genericList> =
 	   GENERIC LPAREN generic_interface_list<out genericList> RPAREN SEMICOLON
-	   (.list = genericList; .)
 	   .
 
 generic_interface_list<out InterfaceList list> =
@@ -271,9 +282,8 @@ generic_interface_list<out InterfaceList list> =
     (. list=new InterfaceList(elements.toList());.)
     	.
     
-port_clause<out InterfaceList list> =
+port_clause<out InterfaceList portList> =
 	 PORT LPAREN port_interface_list<out portList> RPAREN SEMICOLON
-	 (.list = portList;.)	
 	.
 
 port_interface_list<out InterfaceList list> =
@@ -301,24 +311,25 @@ entity_declaration<out EntityDeclaration entityDecl> =
 		END_TOKEN [ENTITY] [identifier<out end_identifier>] SEMICOLON
 		(.entityDecl=new EntityDeclaration(start_identifier,genericClause,portClause,declarativeItems.toList(),concurrentStmt.toList(),end_identifier);.)
 		.
-		
-entity_declarative_item<out DeclarativeItem node> =
-		subprogram_declartion_or_body<out declOrBody> (.node=declOrBody;.)
-		| type_declaration<out typeDecl> (.node=typeDecl;.)
-		| subtype_declaration<out subTypeDecl> (.node=subTypeDecl;.)
-		| constant_declaration<out constantDecl> (.node=constantDecl;.)
-		| signal_declaration<out signalDecl> (. node=signalDecl; .)
-		| variable_declaration<out varDecl> (. node=varDecl; .)
-		| file_declaration<out fileDecl> (. node=fileDecl; .)
-		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (. node=attributeDecl; .)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| disconnection_specification<out disconnectSpec>  (.node=disconnectSpec;.)
-		| use_clause<out useClause> (.node=useClause;.)
-		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
-		| group_declaration<out groupDecl> (.node=groupDecl;.)
-		.	
 
+entity_declarative_item<out DeclarativeItem item> =
+		(.item=null;.)
+		subprogram_declartion_or_body<out item>
+		| type_declaration<out item>
+		| subtype_declaration<out item>
+		| constant_declaration<out item> 
+		| signal_declaration<out item>
+		| variable_declaration<out item>
+		| file_declaration<out item>
+		| alias_declaration<out item>
+		| IF(IsAttributeDeclaration())attribute_declaration<out item>
+		| attribute_specification<out item>
+		| disconnection_specification<out item>
+		| use_clause<out item>
+		| IF(IsGroupTemplate())group_template_declaration<out item>
+		| group_declaration<out item>
+		.
+		
 architecture_body<out ArchitectureDeclaration archDecl> =
 		(.ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();.)
 		ARCHITECTURE identifier<out start_identifier> OF selected_name<out entityName> IS
@@ -330,9 +341,10 @@ architecture_body<out ArchitectureDeclaration archDecl> =
 		.
 		
 configuration_declarative_item<out DeclarativeItem item> =
-		| use_clause<out useClause> (.node=useClause;.)
-		| group_declaration<out groupDecl> (.node=groupDecl;.)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
+		(.item=null;.)
+		| use_clause<out item> 
+		| group_declaration<out item> 
+		| attribute_specification<out item>
 		.
 		
 configuration_declaration<out ConfigurationDeclaration configDecl> =
@@ -360,10 +372,10 @@ block_specification returns [BlockConfigurationSpecification blockConfig]
 block_configuration<out BlockConfiguration blockConfig> =
 		(.
 			ListBuffer<UseClause> useClauses=new ListBuffer<UseClause>();
-			ListBuffer<AnyRef> configurations=new ListBuffer<AnyRef>();
+			ListBuffer<Object> configurations=new ListBuffer<Object>();
 		.)
 		FOR block_specification
-		{use_clause<out useClause> (.useClauses.append(useClause);.)}
+		{use_clause<out uUseClause seClause> (.useClauses.append(useClause);.)}
 		{
 			block_configuration<out blockConfiguration> (.configurations.append(blockConfiguration);.)
 			|component_configuration<out componentConfiguration> (.configurations.append(componentConfiguration);.)
@@ -388,22 +400,23 @@ package_declaration<out PackageDeclaration packageDecl> =
 		(.packageDecl=new PackageDeclaration(start_identifier,declarativeItems.toList(),end_identifier);.)
 		.
 		
-package_declarative_item<out DeclarativeItem node> =
-		subprogram_declartion_or_body<out declOrBody> (.node=declOrBody;.)
-		| type_declaration<out typeDecl> (.node=typeDecl;.)
-		| subtype_declaration<out subTypeDecl> (.node=subTypeDecl;.)
-		| constant_declaration<out constantDecl> (.node=constantDecl;.)
-		| signal_declaration<out signalDecl> (. node=signalDecl; .)
-		| variable_declaration<out varDecl> (. node=varDecl; .)
-		| file_declaration<out fileDecl> (. node=fileDecl; .)
-		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| component_declaration<out componentDecl> (.node=componentDecl;.)
-		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (. node=attributeDecl; .)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| disconnection_specification<out disconnectSpec>  (.node=disconnectSpec;.)
-		| use_clause<out useClause> (.node=useClause;.)
-		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
-		| group_declaration<out groupDecl> (.node=groupDecl;.)
+package_declarative_item<out DeclarativeItem item> =
+		(.item=null;.)
+		subprogram_declartion_or_body<out item>
+		| type_declaration<out item>
+		| subtype_declaration<out item>
+		| constant_declaration<out item> 
+		| signal_declaration<out item>
+		| variable_declaration<out item>
+		| file_declaration<out item>
+		| alias_declaration<out item>
+		| component_declaration<out item>
+		| IF(IsAttributeDeclaration())attribute_declaration<out item>
+		| attribute_specification<out item>
+		| disconnection_specification<out item> 
+		| use_clause<out item>
+		| IF(IsGroupTemplate())group_template_declaration<out item>
+		| group_declaration<out item>
 		.
 
 package_body<out PackageBodyDeclaration packageBody> =
@@ -414,19 +427,20 @@ package_body<out PackageBodyDeclaration packageBody> =
 		(.packageBody = new PackageBodyDeclaration(start_identifier,declarativeItems.toList(),end_identifier);.)
 		.
     
-package_body_declarative_item <out DeclarativeItem node> =
-		subprogram_declartion_or_body<out declOrBody> (.node=declOrBody;.)
-		| type_declaration<out typeDecl> (.node=typeDecl;.)
-		| subtype_declaration<out subTypeDecl> (.node=subTypeDecl;.)
-		| constant_declaration<out constantDecl> (.node=constantDecl;.)
-		| signal_declaration<out signalDecl> (. node=signalDecl; .)
-		| variable_declaration<out varDecl> (. node=varDecl; .)
-		| file_declaration<out fileDecl> (. node=fileDecl; .)
-		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| use_clause<out useClause> (.node=useClause;.)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .) //attribute_specification is not part of VHDL 2002, added to compile ghdl math_real-body.vhd
-		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
-		| group_declaration<out groupDecl> (.node=groupDecl;.)
+package_body_declarative_item <out DeclarativeItem item> =
+		(.item=null;.)
+		subprogram_declartion_or_body<out item>
+		| type_declaration<out item>
+		| subtype_declaration<out item>
+		| constant_declaration<out item>
+		| signal_declaration<out item>
+		| variable_declaration<out item>
+		| file_declaration<out item>
+		| alias_declaration<out item>
+		| use_clause<out item>
+		| attribute_specification<out item> //attribute_specification is not part of VHDL 2002, added to compile ghdl math_real-body.vhd
+		| IF(IsGroupTemplate())group_template_declaration<out item>
+		| group_declaration<out item> 
 		.
 		
 designator<out Identifier id> =
@@ -471,19 +485,20 @@ subprogram_body<out SubProgramDefinition subProgramDef,SubProgramDeclaration sub
 		.)
 		.
 		
-subprogram_declarative_item<out DeclarativeItem node> =
-		subprogram_declartion_or_body<out declOrBody> (.node=declOrBody;.)
-		| type_declaration<out typeDecl> (.node=typeDecl;.)
-		| subtype_declaration<out subTypeDecl> (.node=subTypeDecl;.)
-		| constant_declaration<out constantDecl> (.node=constantDecl;.)
-		| variable_declaration<out varDecl> (. node=varDecl; .)
-		| file_declaration<out fileDecl> (. node=fileDecl; .)
-		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| use_clause<out useClause> (.node=useClause;.)
-		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
-		| group_declaration<out groupDecl> (.node=groupDecl;.)
+subprogram_declarative_item<out DeclarativeItem item> =
+		(.item=null;.)
+		subprogram_declartion_or_body<out item>
+		| type_declaration<out item>
+		| subtype_declaration<out item>
+		| constant_declaration<out item>
+		| variable_declaration<out item>
+		| file_declaration<out item>
+		| alias_declaration<out item>
+		| IF(IsAttributeDeclaration())attribute_declaration<out item>
+		| attribute_specification<out item>
+		| use_clause<out item> 
+		| IF(IsGroupTemplate())group_template_declaration<out item>
+		| group_declaration<out item> 
 		.
 
 type_declaration<out AbstractTypeDeclaration typeDecl> =
@@ -495,15 +510,16 @@ type_declaration<out AbstractTypeDeclaration typeDecl> =
 		.
 
 type_definition<out AbstractTypeDeclaration typeDef,Identifier id,Position pos> =
-		enumeration_type_definition<out enumTypeDef,id,pos> (.typeDef=enumTypeDef; .)
-		//TODO | (RANGE range UNITS) => physical_type_definition<id,pos> (.typeDef=physicalTypeDef.)
-		| integer_or_floating_point_type_definition<out intOrFloat,id,pos> (.typeDef=intOrFloat;.)
-		| array_type_definition<out arrayTypeDef,id,pos> (.typeDef=arrayTypeDef;.)
-		| record_type_definition<out recordTypeDef,id,pos> (.typeDef=recordTypeDef;.)
-		| access_type_definition<out accessTypeDef,id,pos> (.typeDef=accessTypeDef;.)
-		| file_type_definition<out fileTypeDef,id,pos> (.typeDef=fileTypeDef;.)
-		| IF(scanner.Peek()==_BODY)protected_type_body<out protectedTypeBody,id,pos> (.typeDef=protectedTypeBody;.)
-		| protected_type_declaration<out protectedTypeDecl,id,pos> (.typeDef=protectedTypeDecl;.)
+		(.typeDef=null;.)
+		enumeration_type_definition<out typeDef,id,pos>
+		//TODO | (RANGE range UNITS) => physical_type_definition<out typeDef,id,pos>
+		| integer_or_floating_point_type_definition<out typeDef,id,pos>
+		| array_type_definition<out typeDef,id,pos>
+		| record_type_definition<out typeDef,id,pos>
+		| access_type_definition<out typeDef,id,pos> 
+		| file_type_definition<out typeDef,id,pos>
+		| IF(scanner.Peek().kind==_BODY)protected_type_body<out typeDef,id,pos> 
+		| protected_type_declaration<out typeDef,id,pos>
 		.
 
 	
@@ -543,10 +559,10 @@ alias_declaration<out AliasDeclaration aliasDecl> =
 		(.aliasDecl=new AliasDeclaration(pos,designator,subType,name,signature);.)
 		.
 
-alias_designator<out Identifier id> =
-		(identifier<out identifier> (.id=identifier;.)
-		|CHARACTER_LITERAL(.id=toIdentifier(t);.)
-		|STRING_LITERAL(.id=toIdentifier(t);.)
+alias_designator<out Identifier identifier> =
+		(identifier<out identifier> 
+		|CHARACTER_LITERAL(.identifier=toIdentifier(t);.)
+		|STRING_LITERAL(.identifier=toIdentifier(t);.)
 		).	
 	
 component_declaration<out ComponentDeclaration componentDecl> =
@@ -580,7 +596,7 @@ entity_designator<out Tuple2<Identifier,Option<Signature>> designator> =
 		.
 	
 entity_name_list<out Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier> list> =
-		(. elements=new ListBuffer<Tuple2<Identifier,Option<Signature>>>(); .)
+		(. ListBuffer<Tuple2<Identifier,Option<Signature>>> elements=new ListBuffer<Tuple2<Identifier,Option<Signature>>>(); .)
 		entity_designator<out designator> (.elements.append(designator); .) {COMMA entity_designator<out designator> (.elements.append(designator);.)} (.list=new Left(elements.toList());.)
 		| OTHERS (.list=new Right(toIdentifier(t));.)
 		| ALL (.list=new Right(toIdentifier(t));.)
@@ -668,9 +684,12 @@ group_constituent<out Either<Name,Identifier> constituent> =
     .
 
 group_constituent_list<out Seq<Either<Name,Identifier>> list> =
-		(. ListBuffer<Either<Name,Identifier>> elements=new ListBuffer<Either<Name,Identifier>>(); .)
-       group_constituent<out c1> (.elements.append(c1); .) {COMMA group_constituent<out c2> (.elements.append(c2);.)}
-       (.list=elements.toList();.)
+		(. 
+		   ListBuffer<Either<Name,Identifier>> elements=new ListBuffer<Either<Name,Identifier>>(); 
+		   Either<Name,Identifier> element=null;
+		.)
+		group_constituent<out element> (.elements.append(element); .) {COMMA group_constituent<out element> (.elements.append(element);.)}
+		(.list=elements.toList();.)
     	.
     
 use_clause<out UseClause useClause> =
@@ -685,8 +704,11 @@ enumeration_literal<out Identifier id> =
 		.
 	
 enumeration_type_definition<out EnumerationTypeDefinition enumTypeDef,Identifier id,Position pos> =
-		(. ListBuffer<Identifier> elements=new ListBuffer<Identifier>(); .)
-		LPAREN enumeration_literal<out e1> (.elements.append(e1);.){COMMA enumeration_literal<out e2> (.elements.append(e2);.)} RPAREN
+		(. 
+		   ListBuffer<Identifier> elements=new ListBuffer<Identifier>(); 
+		   Identifier element=null;
+		.)
+		LPAREN enumeration_literal<out element> (.elements.append(element);.){COMMA enumeration_literal<out element> (.elements.append(element);.)} RPAREN
 		(.enumTypeDef=new EnumerationTypeDefinition(pos,id,elements.toList());.)
 		.
 	
@@ -709,7 +731,7 @@ physical_type_definition<out PhysicalTypeDefinition physicalTypeDef, Identifier 
 		.		
 
 index_subtype_definition<out SelectedName typeMark> =
-	 	type_mark<out type> RANGE BOX (.typeMark=type;.)
+	 	type_mark<out typeMark> RANGE BOX
 		.
 				
 array_type_definition<out AbstractArrayTypeDefinition arrayTypeDef,Identifier id,Position pos> = 
@@ -719,7 +741,7 @@ array_type_definition<out AbstractArrayTypeDefinition arrayTypeDef,Identifier id
 		//| index_constraint OF subType=subtype_indication
 		)
 		(.
-			if (unConstraintList.isEmpty) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,$index_constraint.ranges,$subType.subType);
+			if (unConstraintList.isEmpty()) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,$index_constraint.ranges,$subType.subType);
 			else arrayTypeDef=new UnconstrainedArrayTypeDefinition(pos,id,unConstraintList.toList(),$subType.subType);
 		.)
 		.
@@ -736,12 +758,12 @@ record_type_definition<out RecordTypeDefinition recordTypeDef,Identifier id,Posi
 		.
 
 access_type_definition<out AccessTypeDefinition accessTypeDef,Identifier id,Position pos> =
-		ACCESS subtype_indication<out subType> 
+		ACCESS subtype_indication<out SubTypeIndication subType> 
 		(.accessTypeDef=new AccessTypeDefinition(pos,id,subType);.)
 		.
 	
 file_type_definition<out FileTypeDefinition fileTypeDef,Identifier id,Position pos> =
-		FILE OF type_mark<out type> 
+		FILE OF type_mark<out SelectedName type> 
 		(.fileTypeDef=new FileTypeDefinition(pos,id,type);.)
 		.
 		
@@ -753,10 +775,10 @@ protected_type_declaration<out ProtectedTypeDeclaration protectedTypeDecl,Identi
 		(.protectedTypeDecl=new ProtectedTypeDeclaration(pos,id,items.toList(),endIdentifier);.)
 		.
 				
-protected_type_declarative_item<out DeclarativeItem node> =
-		subprogram_declartion_or_body<out declOrBody> (.node=declOrBody;.)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| use_clause<out useClause> (.node=useClause;.)
+protected_type_declarative_item<out DeclarativeItem item> =
+		subprogram_declartion_or_body<out item>
+		| attribute_specification<out item> 
+		| use_clause<out item>
 		.
 
 protected_type_body<out ProtectedTypeBodyDeclaration protectedTypeBody,Identifier id,Position pos> =
@@ -767,19 +789,20 @@ protected_type_body<out ProtectedTypeBodyDeclaration protectedTypeBody,Identifie
 		(.protectedTypeBody=new ProtectedTypeBodyDeclaration(pos,id,items.toList(),endIdentifier);.)
 		.
 
-protected_type_body_declarative_item<out DeclarativeItem node> =
-		subprogram_declartion_or_body<out declOrBody> (.node=declOrBody;.)
-		| type_declaration<out typeDecl> (.node=typeDecl;.)
-		| subtype_declaration<out subTypeDecl> (.node=subTypeDecl;.)
-		| constant_declaration<out constantDecl> (.node=constantDecl;.)
-		| variable_declaration<out varDecl> (. node=varDecl; .)
-		| file_declaration<out fileDecl> (. node=fileDecl; .)
-		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| use_clause<out useClause> (.node=useClause;.)
-		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
-		| group_declaration<out groupDecl> (.node=groupDecl;.)
+protected_type_body_declarative_item<out DeclarativeItem item> =
+		(.item=null;.)
+		subprogram_declartion_or_body<out item>
+		| type_declaration<out item>
+		| subtype_declaration<out item>
+		| constant_declaration<out item>
+		| variable_declaration<out item>
+		| file_declaration<out item>
+		| alias_declaration<out item>
+		| IF(IsAttributeDeclaration())attribute_declaration<out item>
+		| attribute_specification<out item>
+		| use_clause<out item>
+		| IF(IsGroupTemplate())group_template_declaration<out item>
+		| group_declaration<out item> 
 		.
 		
 subtype_declaration<out SubTypeDeclaration subTypeDecl> =
@@ -806,8 +829,11 @@ range_constraint<out Range rangeContraint> =
 		.
 
 index_constraint<out Seq<DiscreteRange> ranges> =
-		(. ListBuffer<DiscreteRange> list=new ListBuffer<DiscreteRange>(); .)
-		LPAREN discrete_range<out d1> (.list.append(d1);.) {COMMA  discrete_range<out d2> (.list.append(d2);.)} RPAREN
+		(. 
+		   ListBuffer<DiscreteRange> list=new ListBuffer<DiscreteRange>();
+		   DiscreteRange discreteRange=null;
+		.)
+		LPAREN discrete_range<out discreteRange> (.list.append(discreteRange);.) {COMMA  discrete_range<out discreteRange> (.list.append(discreteRange);.)} RPAREN
 		(.ranges = list.toList();.)
 		.
 		
@@ -837,24 +863,27 @@ type_mark<out SelectedName typeName> =
 architecture_statement_list<out Seq<ConcurrentStatement> list> =
 (.
 	ListBuffer<ConcurrentStatement> statementList=new ListBuffer<ConcurrentStatement>();
-	list=List();
 .)
-	  {architecture_statement<out stmt> (.statementList.append(stmt);.)}
+	  {architecture_statement<out ConcurrentStatement stmt> (.statementList.append(stmt);.)}
 	  (.list=statementList.toList();.)
 	  .
 
 architecture_statement<out ConcurrentStatement concurrentStmt> =
+		(.
+		  concurrentStmt=null;
+		  Identifier label=null;
+		.)
 		  label_colon<out label> (
 			//TODO (architecture_statement_with_label[null])=>architecture_statement_with_label[label] {$stmt=$architecture_statement_with_label.stmt}
-			architecture_statement_optional_label<out stmt,label> (.concurrentStmt=stmt;.)
+			architecture_statement_optional_label<out concurrentStmt,label>
 			)
-		| architecture_statement_optional_label<out stmt,label> (.concurrentStmt=stmt;.)
+		| architecture_statement_optional_label<out concurrentStmt,label>
 		.
 
 architecture_statement_with_label<out ConcurrentStatement concurrentStmt, Identifier label> =
-		component_instantiation_statement<out stmt,label> (.concurrentStmt=stmt;.)
-		| block_statement<out stmt,label> (.concurrentStmt=stmt;.)
-		| generate_statement<out stmt,label> (.concurrentStmt=stmt;.)
+		component_instantiation_statement<out concurrentStmt,label>
+		| block_statement<out concurrentStmt,label>
+		| generate_statement<out concurrentStmt,label>
 		.
 				
 architecture_statement_optional_label<out ConcurrentStatement concurrentStmt, Identifier label> =
@@ -866,14 +895,12 @@ architecture_statement_optional_label<out ConcurrentStatement concurrentStmt, Id
 		)
 		.		
 
-generic_map_aspect<out AssociationList list> =
+generic_map_aspect<out AssociationList associationList> =
 		GENERIC MAP LPAREN association_list<out associationList> RPAREN
-		(. list=associationList; .)
 		.
 		
-port_map_aspect<out AssociationList list> =
+port_map_aspect<out AssociationList associationList> =
 		PORT MAP LPAREN association_list<out associationList> RPAREN
-		(. list=associationList; .)
 		.
 					
 block_statement<out BlockStatement blockStmt, Identifier label> =
@@ -891,23 +918,24 @@ block_statement<out BlockStatement blockStmt, Identifier label> =
 		(. blockStmt=new BlockStatement(pos,label,guard_expression,genericClause,genericMap,portClause,portMap,declItems.toList(),statementList,end_block_label);.)
 		.
 				
-block_declarative_item <out DeclarativeItem node> =
-		subprogram_declartion_or_body<out declOrBody> (.node=declOrBody;.)
-		| type_declaration<out typeDecl> (.node=typeDecl;.)
-		| subtype_declaration<out subTypeDecl> (.node=subTypeDecl;.)
-		| constant_declaration<out constantDecl> (.node=constantDecl;.)
-		| signal_declaration<out signalDecl> (.node=signalDecl;.)
-		| variable_declaration<out varDecl> (. node=varDecl; .)
-		| file_declaration<out fileDecl> (. node=fileDecl; .)
-		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| component_declaration<out componentDecl> (.node=componentDecl;.)
-		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| configuration_specification<out configSpec> (.node=configSpec;.)
-		| disconnection_specification<out disconnectSpec>  (.node=disconnectSpec;.)
-		| use_clause<out useClause> (.node=useClause;.)
-		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
-		| group_declaration<out groupDecl> (.node=groupDecl;.)
+block_declarative_item <out DeclarativeItem item> =
+		(.item=null;.)
+		subprogram_declartion_or_body<out item>
+		| type_declaration<out item>
+		| subtype_declaration<out item>
+		| constant_declaration<out item> 
+		| signal_declaration<out item> 
+		| variable_declaration<out item>
+		| file_declaration<out item> 
+		| alias_declaration<out item>
+		| component_declaration<out item>
+		| IF(IsAttributeDeclaration())attribute_declaration<out item>
+		| attribute_specification<out item>
+		| configuration_specification<out item> 
+		| disconnection_specification<out item>
+		| use_clause<out item>
+		| IF(IsGroupTemplate())group_template_declaration<out item>
+		| group_declaration<out item>
 		.
 		
 process_statement<out ProcessStatement processStmt,Identifier label,Boolean postponed> =
@@ -923,23 +951,24 @@ process_statement<out ProcessStatement processStmt,Identifier label,Boolean post
 		(.processStmt=new ProcessStatement(pos,label,postponed,name_list,declItem.toList(),sequentialStatements,end_process_label);.)
 		.
 		
-process_declarative_item <out DeclarativeItem node> =
-		subprogram_declartion_or_body<out declOrBody> (.node=declOrBody;.)
-		| type_declaration<out typeDecl> (.node=typeDecl;.)
-		| subtype_declaration<out subTypeDecl> (.node=subTypeDecl;.)
-		| constant_declaration<out constantDecl> (.node=constantDecl;.)
-		| variable_declaration<out varDecl> (. node=varDecl; .)
-		| file_declaration<out fileDecl> (. node=fileDecl; .)
-		| alias_declaration<out aliasDecl> (. node=aliasDecl; .)
-		| use_clause<out useClause> (.node=useClause;.)
-		| IF(IsAttributeDeclaration())attribute_declaration<out attributeDecl> (.node=attributeDecl;.)
-		| attribute_specification<out attributeSpec> (.node=attributeSpec.node; .)
-		| IF(IsGroupTemplate())group_template_declaration<out groupTemplateDecl> (.node=groupTemplateDecl;.)
-		| group_declaration<out groupDecl> (.node=groupDecl;.)
+process_declarative_item <out DeclarativeItem item> =
+		(.item=null;.)
+		subprogram_declartion_or_body<out item>
+		| type_declaration<out item> 
+		| subtype_declaration<out item> 
+		| constant_declaration<out item>
+		| variable_declaration<out item> 
+		| file_declaration<out item>
+		| alias_declaration<out item> 
+		| use_clause<out item>
+		| IF(IsAttributeDeclaration())attribute_declaration<out item>
+		| attribute_specification<out item>
+		| IF(IsGroupTemplate())group_template_declaration<out item> 
+		| group_declaration<out item>
 		.
 		
 concurrent_procedure_call_statement<out ConcurrentProcedureCallStatement procedureCallStmt, Identifier label,Boolean postponed> =
-		selected_name<out procedure_name> [LPAREN association_list<out associationList>  RPAREN] SEMICOLON
+		selected_name<out SelectedName procedure_name> [LPAREN association_list<out associationList>  RPAREN] SEMICOLON
 		(.procedureCallStmt=new ConcurrentProcedureCallStatement(label,postponed,procedure_name,associationList);.)
 		.
 		
@@ -949,9 +978,9 @@ concurrent_assertion_statement<out ConcurrentAssertionStatement assertStmt, Iden
 		(.assertStmt=new ConcurrentAssertionStatement(pos,label,postponed,expr,report_expression,severity_expression);.)
 		.
 							
-concurrent_signal_assignment_statement<ConcurrentSignalAssignmentStatement node, Identifier label,Boolean postponed> =
-		 conditional_signal_assignment<out conditional,label,postponed>(.node=conditional;.)
-		|selected_signal_assignment<out selected,label,postponed>(.node=selected;.)
+concurrent_signal_assignment_statement<ConcurrentSignalAssignmentStatement signalAssignmentStatement, Identifier label,Boolean postponed> =
+		 conditional_signal_assignment<out signalAssignmentStatement,label,postponed>
+		|selected_signal_assignment<out signalAssignmentStatement,label,postponed>
 		.
 
 conditional_signal_assignment<out ConcurrentConditionalSignalAssignment signalAssignment, Identifier label,Boolean postponed> =
@@ -1002,8 +1031,9 @@ component_instantiation_statement<out ComponentInstantiationStatement stmt, Iden
 		.
 		
 generate_statement<out ConcurrentStatement generateStmt, Identifier label> =
-		for_generate_statement<out forGenerateStmt, label> (.generateStmt=forGenerateStmt;.)
-		| if_generate_statement<out ifGenerateStmt, label> (.generateStmt=ifGenerateStmt;.)
+		(.generateStmt=null;.)
+		for_generate_statement<out generateStmt, label>
+		| if_generate_statement<out generateStmt, label>
 		.
 	
 for_generate_statement<out ForGenerateStatement forGenerateStmt, Identifier label> =
@@ -1037,27 +1067,27 @@ generate_statement_body<out Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>
 sequential_statement_list<out Seq<SequentialStatement> list> =
 (.
 	ListBuffer<SequentialStatement> tmpList=new ListBuffer<SequentialStatement>();
-	list=List();
 .)
-		{sequential_statement<out stmt>(.tmpList.append(stmt);.)}
+		{sequential_statement<out SequentialStatement stmt>(.tmpList.append(stmt);.)}
 		(.list=tmpList.toList();.)
 		.
 
-sequential_statement<out SequentialStatement stmt> =
+sequential_statement<out SequentialStatement sequentialStatement> =
+		(.sequentialStatement=null;.)
 		[label_colon<out label>] 
-		(wait_statement<out waitStmt,label> (.stmt=waitStmt;.)
-		| assertion_statement<out assertStmt,label> (.stmt=assertStmt;.)
-		| report_statement<out reportStmt,label> (.stmt=reportStmt;.)
+		(wait_statement<out sequentialStatement,label>
+		| assertion_statement<out sequentialStatement,label>
+		| report_statement<out sequentialStatement,label>
 		//TODO | (target LEQ)=>signal_assignment_statement[$label.label] {$stmt=$signal_assignment_statement.signalAssignStmt}
 		//TODO | (target VAR_ASSIGN)=>variable_assignment_statement[$label.label] {$stmt=$variable_assignment_statement.varAssignStmt}
-		| if_statement<out ifStmt,label> (.stmt=ifStmt;.)
-		| case_statement<out caseStmt,label> (.stmt=caseStmt;.)
-		| loop_statement<out loopStmt,label> (.stmt=loopStmt;.)
-		| next_statement<out nextStmt,label> (.stmt=nextStmt;.)
-		| exit_statement<out exitStmt,label> (.stmt=exitStmt;.)
-		| return_statement<out returnStmt,label> (.stmt=returnStmt;.)
-		| null_statement<out nullStmt,label> (.stmt=nullStmt;.)
-		| procedure_call_statement<out procedureCallStmt,label> (.stmt=procedureCallStmt;.)
+		| if_statement<out sequentialStatement,label>
+		| case_statement<out sequentialStatement,label>
+		| loop_statement<out sequentialStatement,label>
+		| next_statement<out sequentialStatement,label>
+		| exit_statement<out sequentialStatement,label>
+		| return_statement<out sequentialStatement,label>
+		| null_statement<out sequentialStatement,label>
+		| procedure_call_statement<out sequentialStatement,label>
 		)
 		.
 	
@@ -1199,14 +1229,20 @@ interface_element_function<out InterfaceList.AbstractInterfaceElement element> =
 		.
 		
 parameter_interface_list_procedure<out InterfaceList list> =
-		(.ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();.)
-		interface_element_procedure<out e1>(.elements.append(e1);.) {SEMICOLON interface_element_procedure<out e2> (.elements.append(e2);.)} 
+		(.
+		  ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();
+		  InterfaceList.AbstractInterfaceElement element=null;
+		.)
+		interface_element_procedure<out element>(.elements.append(element);.) {SEMICOLON interface_element_procedure<out element> (.elements.append(element);.)} 
 		(.list=new InterfaceList(elements.toList());.)
 		.
 		
 parameter_interface_list_function<out InterfaceList list> =
-		(.ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();.)
-		interface_element_function<out e1> (.elements.append(e1);.) {SEMICOLON interface_element_function<out e2> (.elements.append(e2);.)} 
+		(.
+		  ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();
+		  InterfaceList.AbstractInterfaceElement element=null;
+		.)
+		interface_element_function<out element> (.elements.append(element);.) {SEMICOLON interface_element_function<out e2> (.elements.append(elements);.)} 
 		(.list=new InterfaceList(elements.toList());.)
 		.
 			
@@ -1249,8 +1285,11 @@ association_element<out AssociationList.Element element> =
 		.	
 		  
 association_list<out AssociationList list> =
-		(.ListBuffer<AssociationList.Element> elements=new ListBuffer<AssociationList.Element>();.)
-		association_element<out e1> (.elements.append(e1);.) {COMMA association_element<out e2> (.elements.append(e2);.)}
+		(.
+		  ListBuffer<AssociationList.Element> elements=new ListBuffer<AssociationList.Element>();
+		  AssociationList.Element element=null;
+		.)
+		association_element<out element> (.elements.append(element);.) {COMMA association_element<out element> (.elements.append(element);.)}
 		(.list=new AssociationList(elements.toList());.)
 		.
 	
@@ -1268,9 +1307,9 @@ condition<out Expression con> =
 		.
 	 
 expression<out Expression expr> =
-	   relation<out r2> (
+	   relation<out expr> (
 	   //TODO (nand=NAND|nor=NOR) r2=relation {$expr=new LogicalExpression(toPosition(if($nand ne null) $nand else $nor),$r1.rel,if ($nand ne null) LogicalExpression.Operator.NAND else LogicalExpression.Operator.NOR,$r2.rel)}
-	    (.expr=r1;.) {logical_operator<out op> relation<out r2> (.expr=new LogicalExpression(op._1,expr,op._2,r2);.)}
+	   {logical_operator<out op> relation<out Expression right> (.expr=new LogicalExpression(op._1,expr,op._2,right);.)}
 	   )
 	   .
 
@@ -1404,22 +1443,21 @@ qualified_expression<out QualifiedExpression expr,SelectedName typeName> =
 selected_name_list<out Seq<SelectedName> list> =
 (.
 	ListBuffer<SelectedName> tmpList=new ListBuffer<SelectedName>();
-	list=List();
+	SelectedName name;
 .)
-		selected_name<out n1> (.tmpList.append(n1);.) {COMMA selected_name<out n2> (.tmpList.append(n2);.) }
+		selected_name<out name> (.tmpList.append(name);.) {COMMA selected_name<out name> (.tmpList.append(name);.) }
 		(.list=tmpList.toList();.)
 		.
 		
 selected_name<out SelectedName name> =
 		(. ListBuffer<Identifier> parts=new ListBuffer<Identifier>();.)
-		name_prefix<out prefix> { name_selected_part<out selectedPart> (.parts.append(selectedPart);.)}
+		name_prefix<out Identifier prefix> { name_selected_part<out selectedPart> (.parts.append(selectedPart);.)}
 		(.prepend.prepend(prefix); name =new SelectedName(parts.toList());.)
 		.
 
 name_list<out Seq<Name> list> =
 (.
 	ListBuffer<Name> tmpList=new ListBuffer<Name>();
-	list=List();
 .)
 		name<out n1> (.tmpList.append(n1);.) {COMMA name<out n2> (.tmpList.append(n2);.)}
 		(.list=tmpList.toList();.)
@@ -1427,7 +1465,7 @@ name_list<out Seq<Name> list> =
 			
 name<out Name name> =
 		(.ListBuffer<Name.Part> parts=new ListBuffer<Name.Part>();.)
-		name_prefix<out prefix> //TODO( (name_part)=> name_part {parts.append($name_part.part)})*
+		name_prefix<out Identifier prefix> //TODO( (name_part)=> name_part {parts.append($name_part.part)})*
 	  	(.name =new Name(prefix,parts.toList());.)
   		.
 
@@ -1543,20 +1581,19 @@ choices<out Choices choices> =
 identifier_list<out Seq<Identifier> list> =
 (.
 	ListBuffer<Identifier> tmpList=new ListBuffer<Identifier>();
-	list=List();
+	Identifier identifier=null;
 .)
-		identifier<out id1> (.tmpList.append(id1);.) {COMMA identifier<out id2> (.tmpList.append(id2);.) } 
+		identifier<out identifier> (.tmpList.append(identifier);.) {COMMA identifier<out identifier> (.tmpList.append(identifier);.) } 
 		(.list=tmpList.toList();.)
 		.
 			
 identifier<out Identifier id> =
-		BASIC_IDENTIFIER (. id=toIdentifier(input.LT(-1));.)
-		| EXTENDED_IDENTIFIER (. id=toIdentifier(input.LT(-1),false);.)
+		BASIC_IDENTIFIER (. id=toIdentifier(t);.)
+		| EXTENDED_IDENTIFIER (. id=toIdentifier(t,false);.)
 		.
 
 label_colon<out Identifier label> =
-		identifier<out id> COLON
-		(.label=id;.)
+		identifier<out label> COLON
 		.
 		
 END VHDL.
