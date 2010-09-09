@@ -10,6 +10,8 @@ import scala.Left;
 import scala.Right;
 import scala.Tuple2;
 import scala.Option;
+import scala.Some;
+import scala.None;
 import scala.collection.Seq;
 import scala.collection.mutable.ListBuffer;
 
@@ -160,7 +162,31 @@ public class Parser {
 	public Scanner scanner;
 	public Errors errors;
 
-	boolean IsGroupTemplate() {
+	public static class MyListBuffer<T> {
+		ListBuffer<T> impl=new ListBuffer<T>();
+		public void append(T x){
+			if (x!=null) impl.$plus$eq(x);
+		}
+		public void appendAll(Seq<T> x){
+			if (x!=null) impl.appendAll(x);
+		}
+		public void prepend(T x){
+			if (x!=null) impl.$plus$eq$colon(x);
+		}
+		public Seq<T> toList(){
+			return impl.toList();
+		}
+		public boolean isEmpty(){
+			return impl.isEmpty();
+		}
+	}
+	
+	public static <T> Option<T> toOption(T x){return Option.apply(x);}
+	
+  //group_template:GROUP identifier IS LPAREN
+  //group_declaration:GROUP identifier COLON
+  //la == GROUP
+boolean IsGroupTemplate() {
 	Token next;
 	do {
 		next = scanner.Peek();
@@ -183,11 +209,11 @@ private Position toPosition(Token token){
  return new Position(token.line,token.col);
 }    
 
-private Position toIdentifier(Token token){
+private Identifier toIdentifier(Token token){
 	return toIdentifier(token,true);
 }
 
-private Position toIdentifier(Token token,boolean toLowerCase){
+private Identifier toIdentifier(Token token,boolean toLowerCase){
     		if (token.kind!=_STRING_LITERAL && token.kind!=_CHARACTER_LITERAL){
     			return new Identifier(toPosition(token),toLowerCase?token.val.toLowerCase():token.val.replace("\\\\","\\"));   
     		}else{
@@ -259,9 +285,9 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 	
 	DesignFile  VHDL() {
 		DesignFile  designFile;
-		ListBuffer<DesignUnit> units=new ListBuffer<DesignUnit>(); 
+		MyListBuffer<DesignUnit> units=new MyListBuffer<DesignUnit>(); 
 		while (StartOf(1)) {
-			designUnit = design_unit();
+			DesignUnit designUnit = design_unit();
 			units.append(designUnit); 
 		}
 		designFile=new DesignFile(units.toList());
@@ -270,21 +296,21 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	DesignUnit  design_unit() {
 		DesignUnit  designUnit;
-		ListBuffer<Identifier> libraries=new ListBuffer<Identifier>();
-		ListBuffer<UseClause> useClauses=new ListBuffer<UseClause>();
-		//val firstToken=la
+		MyListBuffer<Identifier> libraries=new MyListBuffer<Identifier>();
+		MyListBuffer<UseClause> useClauses=new MyListBuffer<UseClause>();
 		
 		while (la.kind == 48 || la.kind == 98) {
 			if (la.kind == 48) {
-				identifierList = library_clause();
+				Seq<.Identifier.> identifierList = library_clause();
 				libraries.appendAll(identifierList);
 			} else {
-				useClause = use_clause();
+				UseClause useClause = use_clause();
 				useClauses.append(useClause);
 			}
 		}
-		libraryUnit = library_unit();
-		designUnit=new DesignUnit(toPosition(firstToken),libraries.toList(),useClauses.toList(),libraryUnit);
+		Position pos=toPosition(la);
+		LibraryUnit libraryUnit = library_unit();
+		designUnit=new DesignUnit(pos,libraries.toList(),useClauses.toList(),toOption(libraryUnit));
 		return designUnit;
 	}
 
@@ -300,7 +326,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		UseClause  useClause;
 		Position pos=toPosition(la);
 		Expect(98);
-		list = selected_name_list();
+		Seq<.SelectedName.> list = selected_name_list();
 		Expect(114);
 		useClause=new UseClause(pos,list);
 		return useClause;
@@ -308,8 +334,8 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	LibraryUnit  library_unit() {
 		LibraryUnit  libraryUnit;
+		libraryUnit=null;
 		if (la.kind == 32) {
-			libraryUnit=null;
 			libraryUnit = entity_declaration();
 		} else if (la.kind == 14) {
 			libraryUnit = architecture_body();
@@ -325,11 +351,12 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	EntityDeclaration  entity_declaration() {
 		EntityDeclaration  entityDecl;
-		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
-		ListBuffer<ConcurrentStatement> concurrentStmt=new ListBuffer<ConcurrentStatement>();
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>();
+		MyListBuffer<ConcurrentStatement> concurrentStmt=new MyListBuffer<ConcurrentStatement>();
+		InterfaceList genericClause=null,portClause=null;
 		
 		Expect(32);
-		start_identifier = identifier();
+		Identifier start_identifier = identifier();
 		Expect(46);
 		if (la.kind == 38) {
 			genericClause = generic_clause();
@@ -338,7 +365,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			portClause = port_clause();
 		}
 		while (StartOf(2)) {
-			item = entity_declarative_item();
+			DeclarativeItem item = entity_declarative_item();
 			declarativeItems.append(item); 
 		}
 		if (la.kind == 18) {
@@ -349,48 +376,48 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			Get();
 		}
 		if (la.kind == 5 || la.kind == 6) {
-			end_identifier = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		entityDecl=new EntityDeclaration(start_identifier,genericClause,portClause,declarativeItems.toList(),concurrentStmt.toList(),end_identifier);
+		entityDecl=new EntityDeclaration(start_identifier,toOption(genericClause),toOption(portClause),declarativeItems.toList(),concurrentStmt.toList());
 		return entityDecl;
 	}
 
 	ArchitectureDeclaration  architecture_body() {
 		ArchitectureDeclaration  archDecl;
-		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>();
 		Expect(14);
-		start_identifier = identifier();
+		Identifier start_identifier = identifier();
 		Expect(60);
-		entityName = selected_name();
+		SelectedName entityName = selected_name();
 		Expect(46);
 		while (StartOf(3)) {
-			item = block_declarative_item();
+			DeclarativeItem item = block_declarative_item();
 			declarativeItems.append(item); 
 		}
 		Expect(18);
-		statementList = architecture_statement_list();
+		Seq<.ConcurrentStatement.> statementList = architecture_statement_list();
 		Expect(31);
 		if (la.kind == 14) {
 			Get();
 		}
 		if (la.kind == 5 || la.kind == 6) {
-			end_identifier = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		archDecl=new ArchitectureDeclaration(start_identifier,declarativeItems.toList(),entityName,statementList,end_identifier); 
+		archDecl=new ArchitectureDeclaration(start_identifier,declarativeItems.toList(),entityName,statementList); 
 		return archDecl;
 	}
 
 	PackageBodyDeclaration  package_body() {
 		PackageBodyDeclaration  packageBody;
-		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>();
 		Expect(66);
 		Expect(20);
-		start_identifier = identifier();
+		Identifier start_identifier = identifier();
 		Expect(46);
 		while (StartOf(4)) {
-			item = package_body_declarative_item();
+			DeclarativeItem item = package_body_declarative_item();
 			declarativeItems.append(item);
 		}
 		Expect(31);
@@ -399,21 +426,21 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			Expect(20);
 		}
 		if (la.kind == 5 || la.kind == 6) {
-			end_identifier = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		packageBody = new PackageBodyDeclaration(start_identifier,declarativeItems.toList(),end_identifier);
+		packageBody = new PackageBodyDeclaration(start_identifier,declarativeItems.toList());
 		return packageBody;
 	}
 
 	PackageDeclaration  package_declaration() {
 		PackageDeclaration  packageDecl;
-		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>(); 
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>(); 
 		Expect(66);
-		start_identifier = identifier();
+		Identifier start_identifier = identifier();
 		Expect(46);
 		while (StartOf(5)) {
-			item = package_declarative_item();
+			DeclarativeItem item = package_declarative_item();
 			declarativeItems.append(item);
 		}
 		Expect(31);
@@ -421,41 +448,41 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			Get();
 		}
 		if (la.kind == 5 || la.kind == 6) {
-			end_identifier = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		packageDecl=new PackageDeclaration(start_identifier,declarativeItems.toList(),end_identifier);
+		packageDecl=new PackageDeclaration(start_identifier,declarativeItems.toList());
 		return packageDecl;
 	}
 
 	ConfigurationDeclaration  configuration_declaration() {
 		ConfigurationDeclaration  configDecl;
-		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>();
 		Expect(25);
-		start_identifier = identifier();
+		Identifier start_identifier = identifier();
 		Expect(60);
-		entityName = selected_name();
+		SelectedName entityName = selected_name();
 		Expect(46);
 		while (StartOf(6)) {
-			item = configuration_declarative_item();
+			DeclarativeItem item = configuration_declarative_item();
 			declarativeItems.append(item);
 		}
-		blockConfig = block_configuration();
+		BlockConfiguration blockConfig = block_configuration();
 		Expect(31);
 		if (la.kind == 25) {
 			Get();
 		}
 		if (la.kind == 5 || la.kind == 6) {
-			end_identifier = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		configDecl=new ConfigurationDeclaration(start_identifier,declarativeItems.toList(),entityName,blockConfig,end_identifier);
+		configDecl=new ConfigurationDeclaration(start_identifier,declarativeItems.toList(),entityName,blockConfig);
 		return configDecl;
 	}
 
 	Seq<Identifier>  identifier_list() {
 		Seq<Identifier>  list;
-		ListBuffer<Identifier> tmpList=new ListBuffer<Identifier>();
+		MyListBuffer<Identifier> tmpList=new MyListBuffer<Identifier>();
 		Identifier identifier=null;
 		
 		identifier = identifier();
@@ -481,13 +508,13 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	InterfaceList  generic_interface_list() {
 		InterfaceList  list;
-		ListBuffer<InterfaceList.InterfaceConstantDeclaration> elements=new ListBuffer<InterfaceList.InterfaceConstantDeclaration>(); 
-		decl = interface_constant_declaration();
-		elements.append(decl);
+		MyListBuffer<InterfaceList.AbstractInterfaceElement> elements=new MyListBuffer<InterfaceList.AbstractInterfaceElement>(); 
+		InterfaceList.InterfaceConstantDeclaration declaration = interface_constant_declaration();
+		elements.append(declaration);
 		while (la.kind == 114) {
 			Get();
-			decl = interface_constant_declaration();
-			elements.append(decl); 
+			declaration = interface_constant_declaration();
+			elements.append(declaration); 
 		}
 		list=new InterfaceList(elements.toList());
 		return list;
@@ -495,20 +522,21 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	InterfaceList.InterfaceConstantDeclaration  interface_constant_declaration() {
 		InterfaceList.InterfaceConstantDeclaration  constElement;
+		Expression expr=null;
 		if (la.kind == 26) {
 			Get();
 		}
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
 		if (la.kind == 43) {
 			Get();
 		}
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 111) {
 			Get();
 			expr = expression();
 		}
-		constElement=new InterfaceList.InterfaceConstantDeclaration(list,subType,expr);
+		constElement=new InterfaceList.InterfaceConstantDeclaration(list,subType,toOption(expr));
 		return constElement;
 	}
 
@@ -524,13 +552,13 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	InterfaceList  port_interface_list() {
 		InterfaceList  list;
-		ListBuffer<InterfaceList.InterfaceSignalDeclaration> elements=new ListBuffer<InterfaceList.InterfaceSignalDeclaration>(); 
-		decl = interface_signal_declaration_procedure();
-		elements.append(decl); 
+		MyListBuffer<InterfaceList.AbstractInterfaceElement> elements=new MyListBuffer<InterfaceList.AbstractInterfaceElement>(); 
+		InterfaceList.InterfaceSignalDeclaration declaration = interface_signal_declaration_procedure();
+		elements.append(declaration); 
 		while (la.kind == 114) {
 			Get();
-			decl = interface_signal_declaration_procedure();
-			elements.append(decl);
+			declaration = interface_signal_declaration_procedure();
+			elements.append(declaration);
 		}
 		list=new InterfaceList(elements.toList());
 		return list;
@@ -538,28 +566,31 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	InterfaceList.InterfaceSignalDeclaration  interface_signal_declaration_procedure() {
 		InterfaceList.InterfaceSignalDeclaration  signalElement;
+		Expression expr=null;boolean bus=false;
 		if (la.kind == 85) {
 			Get();
 		}
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
 		if (StartOf(7)) {
 			mode = interface_mode();
 		}
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 22) {
 			Get();
+			bus=true;
 		}
 		if (la.kind == 111) {
 			Get();
 			expr = expression();
 		}
-		signalElement=new InterfaceList.InterfaceSignalDeclaration(list,mode,subType,$BUS!=null,expr);
+		signalElement=new InterfaceList.InterfaceSignalDeclaration(list,mode,subType,bus,toOption(expr));
 		return signalElement;
 	}
 
 	Identifier  identifier() {
 		Identifier  id;
+		id=null;
 		if (la.kind == 6) {
 			Get();
 			id=toIdentifier(t);
@@ -572,8 +603,8 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	DeclarativeItem  entity_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(8)) {
-			item=null;
 			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
 			item = type_declaration();
@@ -605,9 +636,14 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		return item;
 	}
 
+	void unused_identifier() {
+		Identifier unused = identifier();
+	}
+
 	DeclarativeItem  subprogram_declartion_or_body() {
 		DeclarativeItem  declOrBody;
-		decl = subprogram_specification();
+		SubProgramDefinition subProgramDef=null;
+		SubProgramDeclaration decl = subprogram_specification();
 		if (la.kind == 46) {
 			subProgramDef = subprogram_body(decl);
 		}
@@ -618,14 +654,13 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	AbstractTypeDeclaration  type_declaration() {
 		AbstractTypeDeclaration  typeDecl;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);typeDecl=null;
 		Expect(94);
-		id = identifier();
+		Identifier id = identifier();
 		if (la.kind == 46) {
 			Get();
-			typeDef = type_definition(id,pos);
+			typeDecl = type_definition(id,pos);
 			Expect(114);
-			typeDecl=typeDef;
 		} else if (la.kind == 114) {
 			Get();
 			typeDecl=new IncompleteTypeDeclaration(pos,id);
@@ -637,9 +672,9 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		SubTypeDeclaration  subTypeDecl;
 		Position pos=toPosition(la);
 		Expect(90);
-		identifier = identifier();
+		Identifier identifier = identifier();
 		Expect(46);
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		Expect(114);
 		subTypeDecl=new SubTypeDeclaration(pos,identifier,subType);
 		return subTypeDecl;
@@ -647,27 +682,27 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	ConstantDeclaration  constant_declaration() {
 		ConstantDeclaration  constantDecl;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression expr=null;
 		Expect(26);
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 111) {
 			Get();
 			expr = expression();
 		}
 		Expect(114);
-		constantDecl=new ConstantDeclaration(pos,list,subType,expr);
+		constantDecl=new ConstantDeclaration(pos,list,subType,toOption(expr));
 		return constantDecl;
 	}
 
 	SignalDeclaration  signal_declaration() {
 		SignalDeclaration  signalDecl;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression expr=null;
 		Expect(85);
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 22 || la.kind == 75) {
 			if (la.kind == 75) {
 				Get();
@@ -683,7 +718,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		Option<SignalDeclaration.Type> signalType=null;
 		if(reg!=null) signalType=new Some(SignalDeclaration.Type.REGISTER);
 		else if (bus!=null) signalType=new Some(SignalDeclaration.Type.BUS);
-		else signalType=None;
+		else signalType=scala.None$.MODULE$;
 		signalDecl=new SignalDeclaration(pos,list,subType,signalType,expr);
 		
 		return signalDecl;
@@ -691,30 +726,31 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	VariableDeclaration  variable_declaration() {
 		VariableDeclaration  varDecl;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression expr=null;boolean shared=false;
 		if (la.kind == 84) {
 			Get();
+			shared=true;
 		}
 		Expect(99);
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 111) {
 			Get();
 			expr = expression();
 		}
 		Expect(114);
-		varDecl=new VariableDeclaration(pos,$SHARED!=null,list,subType,expr);
+		varDecl=new VariableDeclaration(pos,shared,list,subType,toOption(expr));
 		return varDecl;
 	}
 
 	FileDeclaration  file_declaration() {
 		FileDeclaration  fileDecl;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression file_open_kind_expression=null,file_logical_name=null;
 		Expect(34);
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 46 || la.kind == 62) {
 			if (la.kind == 62) {
 				Get();
@@ -724,26 +760,26 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			file_logical_name = expression();
 		}
 		Expect(114);
-		fileDecl=new FileDeclaration(pos,list,subType,file_open_kind_expression,file_logical_name);
+		fileDecl=new FileDeclaration(pos,list,subType,toOption(file_open_kind_expression),toOption(file_logical_name));
 		return fileDecl;
 	}
 
 	AliasDeclaration  alias_declaration() {
 		AliasDeclaration  aliasDecl;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Signature signature=null;SubTypeIndication subType=null;
 		Expect(11);
-		designator = alias_designator();
+		Identifier designator = alias_designator();
 		if (la.kind == 121) {
 			Get();
 			subType = subtype_indication();
 		}
 		Expect(46);
-		name = name();
+		Name name = name();
 		if (la.kind == 119) {
 			signature = signature();
 		}
 		Expect(114);
-		aliasDecl=new AliasDeclaration(pos,designator,subType,name,signature);
+		aliasDecl=new AliasDeclaration(pos,designator,toOption(subType),name,toOption(signature));
 		return aliasDecl;
 	}
 
@@ -751,9 +787,9 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		AttributeDeclaration  attributeDecl;
 		Position pos=toPosition(la);
 		Expect(17);
-		identifier = identifier();
+		Identifier identifier = identifier();
 		Expect(121);
-		type = type_mark();
+		SelectedName type = type_mark();
 		Expect(114);
 		attributeDecl=new AttributeDeclaration(pos,identifier,type);
 		return attributeDecl;
@@ -761,15 +797,15 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	AttributeSpecification  attribute_specification() {
 		AttributeSpecification  node;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier> nameList=null;
 		Expect(17);
-		identifier = identifier();
+		Identifier identifier = identifier();
 		Expect(60);
 		nameList = entity_name_list();
 		Expect(121);
-		entityClass = entity_class();
+		EntityClass.Value entityClass = entity_class();
 		Expect(46);
-		expr = expression();
+		Expression expr = expression();
 		Expect(114);
 		node=new AttributeSpecification(pos,identifier,nameList,entityClass,expr);
 		return node;
@@ -777,39 +813,41 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	DisconnectionSpecification  disconnection_specification() {
 		DisconnectionSpecification  disconnectSpec;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Identifier id=null;Seq<SelectedName> list=null;
 		Expect(27);
 		if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
 			list = selected_name_list();
 		} else if (la.kind == 64) {
 			Get();
+			id=toIdentifier(t);
 		} else if (la.kind == 12) {
 			Get();
+			id=toIdentifier(t);
 		} else SynErr(139);
 		Expect(121);
-		type = type_mark();
+		SelectedName type = type_mark();
 		Expect(10);
-		expr = expression();
+		Expression expr = expression();
 		Expect(114);
-		disconnectSpec= new DisconnectionSpecification(pos,id==null?new Left(list):new Right(toIdentifier(id)),type,expr);
+		disconnectSpec= new DisconnectionSpecification(pos,id==null?new Left(list):new Right(id),type,expr);
 		return disconnectSpec;
 	}
 
 	GroupTemplateDeclaration  group_template_declaration() {
 		GroupTemplateDeclaration  groupTemplateDecl;
 		Position pos=toPosition(la);
-		ListBuffer<GroupTemplateDeclaration.Element> elements=new ListBuffer<GroupTemplateDeclaration.Element>(); 
+		MyListBuffer<GroupTemplateDeclaration.Element> elements=new MyListBuffer<GroupTemplateDeclaration.Element>(); 
 		 
 		Expect(39);
-		identifier = identifier();
+		Identifier identifier = identifier();
 		Expect(46);
 		Expect(117);
-		e1 = entity_class_entry();
-		elements.append(e1);
+		GroupTemplateDeclaration.Element entry = entity_class_entry();
+		elements.append(entry);
 		while (la.kind == 115) {
 			Get();
-			e2 = entity_class_entry();
-			elements.append(e2);
+			entry = entity_class_entry();
+			elements.append(entry);
 		}
 		Expect(118);
 		Expect(114);
@@ -821,11 +859,11 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		GroupDeclaration  groupDecl;
 		Position pos=toPosition(la);
 		Expect(39);
-		identifier = identifier();
+		Identifier identifier = identifier();
 		Expect(121);
-		selectedName = selected_name();
+		SelectedName selectedName = selected_name();
 		Expect(117);
-		list = group_constituent_list();
+		Object list = group_constituent_list();
 		Expect(118);
 		Expect(114);
 		groupDecl=new GroupDeclaration(pos,identifier,selectedName,list);
@@ -834,20 +872,20 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	SelectedName  selected_name() {
 		SelectedName  name;
-		ListBuffer<Identifier> parts=new ListBuffer<Identifier>();
+		MyListBuffer<Identifier> parts=new MyListBuffer<Identifier>();
 		Identifier prefix = name_prefix();
 		while (la.kind == 130) {
-			selectedPart = name_selected_part();
-			parts.append(selectedPart);
+			Name.SelectedPart selectedPart = name_selected_part();
+			parts.append(selectedPart.identifier());
 		}
-		prepend.prepend(prefix); name =new SelectedName(parts.toList());
+		parts.prepend(prefix); name =new SelectedName(parts.toList());
 		return name;
 	}
 
 	DeclarativeItem  block_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(8)) {
-			item=null;
 			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
 			item = type_declaration();
@@ -885,7 +923,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Seq<ConcurrentStatement>  architecture_statement_list() {
 		Seq<ConcurrentStatement>  list;
-		ListBuffer<ConcurrentStatement> statementList=new ListBuffer<ConcurrentStatement>();
+		MyListBuffer<ConcurrentStatement> statementList=new MyListBuffer<ConcurrentStatement>();
 		
 		while (StartOf(9)) {
 			ConcurrentStatement stmt = architecture_statement();
@@ -897,8 +935,8 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	DeclarativeItem  configuration_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(6)) {
-			item=null;
 		} else if (la.kind == 98) {
 			item = use_clause();
 		} else if (la.kind == 39) {
@@ -911,37 +949,56 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	BlockConfiguration  block_configuration() {
 		BlockConfiguration  blockConfig;
-		ListBuffer<UseClause> useClauses=new ListBuffer<UseClause>();
-		ListBuffer<Object> configurations=new ListBuffer<Object>();
+		MyListBuffer<UseClause> useClauses=new MyListBuffer<UseClause>();
+		MyListBuffer<Object> configurations=new MyListBuffer<Object>();
 		
 		Expect(35);
-		block_specification();
+		BlockConfigurationSpecification blockSpec = block_specification();
 		while (la.kind == 98) {
-			uUseClause seClause = use_clause();
+			UseClause useClause = use_clause();
 			useClauses.append(useClause);
 		}
 		while (la.kind == 35) {
 			if (la.kind == 35) {
-				blockConfiguration = block_configuration();
+				BlockConfiguration blockConfiguration = block_configuration();
 				configurations.append(blockConfiguration);
 			} else {
-				componentConfiguration = component_configuration();
+				ComponentConfiguration componentConfiguration = component_configuration();
 				configurations.append(componentConfiguration);
 			}
 		}
 		Expect(31);
 		Expect(35);
 		Expect(114);
-		blockConfig=new BlockConfiguration(blockConfiguration,useClauses.toList(),configurations.toList());
+		blockConfig=new BlockConfiguration(blockSpec,useClauses.toList(),configurations.toList());
 		return blockConfig;
 	}
 
-	void block_specification() {
+	void block_configuration_index() {
 		Expect(131);
+	}
+
+	BlockConfigurationSpecification  block_specification() {
+		BlockConfigurationSpecification  blockSpec;
+		blockSpec=null;
+		if (scanner.Peek().kind==_LPAREN) {
+			Identifier identifier = identifier();
+			if (la.kind == 117) {
+				Get();
+				block_configuration_index();
+				Expect(118);
+			}
+			blockSpec=new BlockConfigurationSpecification(new Right(Tuple2(identifier,$block_configuration_index.node)));
+		} else if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
+			SelectedName selectedName = selected_name();
+			blockSpec=new BlockConfigurationSpecification(new Left(selectedName));
+		} else SynErr(142);
+		return blockSpec;
 	}
 
 	ComponentConfiguration  component_configuration() {
 		ComponentConfiguration  componentConfig;
+		BlockConfiguration blockConfiguration=null;
 		Expect(35);
 		componentSpec = component_specification();
 		if (StartOf(10)) {
@@ -954,15 +1011,15 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		Expect(31);
 		Expect(35);
 		Expect(114);
-		componentConfig=new ComponentConfiguration(componentSpec,indication,blockConfiguration);
+		componentConfig=new ComponentConfiguration(componentSpec,toOption(indication),toOption(blockConfiguration));
 		return componentConfig;
 	}
 
 	Object  component_specification() {
 		Object  spec;
-		list = instantiation_list();
+		Object list = instantiation_list();
 		Expect(121);
-		name = selected_name();
+		Name name = selected_name();
 		return spec;
 	}
 
@@ -973,18 +1030,18 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			entity_aspect();
 		}
 		if (la.kind == 38) {
-			genericMap = generic_map_aspect();
+			AssociationList genericMap = generic_map_aspect();
 		}
 		if (la.kind == 67) {
-			portMap = port_map_aspect();
+			AssociationList portMap = port_map_aspect();
 		}
 		return indication;
 	}
 
 	DeclarativeItem  package_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(8)) {
-			item=null;
 			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
 			item = type_declaration();
@@ -1014,34 +1071,38 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			item = group_template_declaration();
 		} else if (la.kind == 39) {
 			item = group_declaration();
-		} else SynErr(142);
+		} else SynErr(143);
 		return item;
 	}
 
 	ComponentDeclaration  component_declaration() {
 		ComponentDeclaration  componentDecl;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);InterfaceList genericClause=null,portClause=null;
 		Expect(24);
-		start_identifier = identifier();
+		Identifier start_identifier = identifier();
 		if (la.kind == 46) {
 			Get();
 		}
-		gernicClause = generic_clause();
-		portClause = port_clause();
+		if (la.kind == 38) {
+			genericClause = generic_clause();
+		}
+		if (la.kind == 67) {
+			portClause = port_clause();
+		}
 		Expect(31);
 		Expect(24);
 		if (la.kind == 5 || la.kind == 6) {
-			end_identifier = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		componentDecl=new ComponentDeclaration(pos,start_identifier,gernicClause,portClause,end_identifier);
+		componentDecl=new ComponentDeclaration(pos,start_identifier,toOption(genericClause),toOption(portClause));
 		return componentDecl;
 	}
 
 	DeclarativeItem  package_body_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(8)) {
-			item=null;
 			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
 			item = type_declaration();
@@ -1065,25 +1126,25 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			item = group_template_declaration();
 		} else if (la.kind == 39) {
 			item = group_declaration();
-		} else SynErr(143);
+		} else SynErr(144);
 		return item;
 	}
 
 	Identifier  designator() {
-		Identifier  id;
+		Identifier  identifier;
+		identifier = null;
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
-			id=identifier;
 		} else if (la.kind == 7) {
 			Get();
-			id=toIdentifier(t);
-		} else SynErr(144);
-		return id;
+			identifier=toIdentifier(t);
+		} else SynErr(145);
+		return identifier;
 	}
 
 	SubProgramDeclaration  subprogram_specification() {
 		SubProgramDeclaration  decl;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Identifier designator=null;InterfaceList list=null;decl=null;
 		if (la.kind == 69) {
 			Get();
 			designator = designator();
@@ -1092,13 +1153,15 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 				list = parameter_interface_list_procedure();
 				Expect(118);
 			}
-			decl=new ProcedureDeclaration(pos,designator,list);
+			decl=new ProcedureDeclaration(pos,designator,toOption(list));
 		} else if (la.kind == 36 || la.kind == 42 || la.kind == 72) {
+			boolean pure=true;
 			if (la.kind == 42 || la.kind == 72) {
 				if (la.kind == 72) {
 					Get();
 				} else {
 					Get();
+					pure=false;
 				}
 			}
 			Expect(36);
@@ -1109,15 +1172,15 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 				Expect(118);
 			}
 			Expect(79);
-			returnType = type_mark();
-			decl=new FunctionDeclaration(pos,i==null,designator,list,returnType);
-		} else SynErr(145);
+			SelectedName returnType = type_mark();
+			decl=new FunctionDeclaration(pos,pure,designator,toOption(list),returnType);
+		} else SynErr(146);
 		return decl;
 	}
 
 	InterfaceList  parameter_interface_list_procedure() {
 		InterfaceList  list;
-		ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();
+		MyListBuffer<InterfaceList.AbstractInterfaceElement> elements=new MyListBuffer<InterfaceList.AbstractInterfaceElement>();
 		InterfaceList.AbstractInterfaceElement element=null;
 		
 		element = interface_element_procedure();
@@ -1133,15 +1196,15 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	InterfaceList  parameter_interface_list_function() {
 		InterfaceList  list;
-		ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();
+		MyListBuffer<InterfaceList.AbstractInterfaceElement> elements=new MyListBuffer<InterfaceList.AbstractInterfaceElement>();
 		InterfaceList.AbstractInterfaceElement element=null;
 		
 		element = interface_element_function();
 		elements.append(element);
 		while (la.kind == 114) {
 			Get();
-			e2 = interface_element_function();
-			elements.append(elements);
+			element = interface_element_function();
+			elements.append(element);
 		}
 		list=new InterfaceList(elements.toList());
 		return list;
@@ -1149,21 +1212,20 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	SelectedName  type_mark() {
 		SelectedName  typeName;
-		name = selected_name();
-		typeName=name;
+		typeName = selected_name();
 		return typeName;
 	}
 
 	SubProgramDefinition  subprogram_body(SubProgramDeclaration subprogramDecl) {
 		SubProgramDefinition  subProgramDef;
-		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>(); 
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>(); 
 		Expect(46);
 		while (StartOf(11)) {
-			item = subprogram_declarative_item();
-			declItems.append(item); 
+			DeclarativeItem item = subprogram_declarative_item();
+			declarativeItems.append(item); 
 		}
 		Expect(18);
-		sequentialStatements = sequential_statement_list();
+		Seq<.SequentialStatement.> sequentialStatements = sequential_statement_list();
 		Expect(31);
 		if (la.kind == 36 || la.kind == 69) {
 			if (la.kind == 69) {
@@ -1173,14 +1235,14 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			}
 		}
 		if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
-			endDesignator = designator();
+			Identifier unused = designator();
 		}
 		if (subprogramDecl instanceof ProcedureDeclaration){
 		ProcedureDeclaration procDecl = (ProcedureDeclaration)subprogramDecl;
-		subProgramDef=new ProcedureDefinition(subprogramDecl.position,procDecl.identifier,procDecl.parameterInterfaceList,declItems.toList(),sequentialStatements,endIdent);
+		subProgramDef=new ProcedureDefinition(subprogramDecl.position(),procDecl.identifier(),procDecl.parameterInterfaceList(),declarativeItems.toList(),sequentialStatements);
 		}else {
 			FunctionDeclaration funcDecl=(FunctionDeclaration)subprogramDecl;
-			subProgramDef=new FunctionDefinition(subprogramDecl.position,funcDecl.pure,funcDecl.identifier,funcDecl.parameterInterfaceList,funcDecl.returnType,declItems.toList(),sequentialStatements,endIdent);
+			subProgramDef=new FunctionDefinition(subprogramDecl.position(),funcDecl.pure(),funcDecl.identifier(),funcDecl.parameterInterfaceList(),funcDecl.returnType(),declarativeItems.toList(),sequentialStatements);
 		}
 		
 		return subProgramDef;
@@ -1188,16 +1250,15 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	DeclarativeItem  subprogram_declaration() {
 		DeclarativeItem  subprogramDecl;
-		decl = subprogram_specification();
+		subprogramDecl = subprogram_specification();
 		Expect(114);
-		subprogramDecl=decl;
 		return subprogramDecl;
 	}
 
 	DeclarativeItem  subprogram_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(8)) {
-			item=null;
 			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
 			item = type_declaration();
@@ -1221,13 +1282,13 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			item = group_template_declaration();
 		} else if (la.kind == 39) {
 			item = group_declaration();
-		} else SynErr(146);
+		} else SynErr(147);
 		return item;
 	}
 
 	Seq<SequentialStatement>  sequential_statement_list() {
 		Seq<SequentialStatement>  list;
-		ListBuffer<SequentialStatement> tmpList=new ListBuffer<SequentialStatement>();
+		MyListBuffer<SequentialStatement> tmpList=new MyListBuffer<SequentialStatement>();
 		
 		while (StartOf(12)) {
 			SequentialStatement stmt = sequential_statement();
@@ -1239,8 +1300,8 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	AbstractTypeDeclaration  type_definition(Identifier id,Position pos) {
 		AbstractTypeDeclaration  typeDef;
+		typeDef=null;
 		if (la.kind == 117) {
-			typeDef=null;
 			typeDef = enumeration_type_definition(id,pos);
 		} else if (la.kind == 73) {
 			typeDef = integer_or_floating_point_type_definition(id,pos);
@@ -1256,13 +1317,13 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			typeDef = protected_type_body(id,pos);
 		} else if (la.kind == 71) {
 			typeDef = protected_type_declaration(id,pos);
-		} else SynErr(147);
+		} else SynErr(148);
 		return typeDef;
 	}
 
 	EnumerationTypeDefinition  enumeration_type_definition(Identifier id,Position pos) {
 		EnumerationTypeDefinition  enumTypeDef;
-		ListBuffer<Identifier> elements=new ListBuffer<Identifier>(); 
+		MyListBuffer<Identifier> elements=new MyListBuffer<Identifier>(); 
 		Identifier element=null;
 		
 		Expect(117);
@@ -1281,14 +1342,14 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 	IntegerOrFloatingPointTypeDefinition  integer_or_floating_point_type_definition(Identifier id,Position pos) {
 		IntegerOrFloatingPointTypeDefinition  intOrFloat;
 		Expect(73);
-		range = range();
+		Range range = range();
 		intOrFloat=new IntegerOrFloatingPointTypeDefinition(pos,id,range);
 		return intOrFloat;
 	}
 
 	AbstractArrayTypeDefinition  array_type_definition(Identifier id,Position pos) {
 		AbstractArrayTypeDefinition  arrayTypeDef;
-		ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>(); 
+		MyListBuffer<SelectedName> unConstraintList=new MyListBuffer<SelectedName>(); 
 		Expect(15);
 		if (unConstraintList.isEmpty()) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,$index_constraint.ranges,$subType.subType);
 		else arrayTypeDef=new UnconstrainedArrayTypeDefinition(pos,id,unConstraintList.toList(),$subType.subType);
@@ -1298,21 +1359,21 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	RecordTypeDefinition  record_type_definition(Identifier id,Position pos) {
 		RecordTypeDefinition  recordTypeDef;
-		ListBuffer<RecordTypeDefinition.Element> elements=new ListBuffer<RecordTypeDefinition.Element>(); 
+		MyListBuffer<RecordTypeDefinition.Element> elements=new MyListBuffer<RecordTypeDefinition.Element>(); 
 		Expect(74);
 		while (la.kind == 5 || la.kind == 6) {
-			list = identifier_list();
+			Seq<.Identifier.> list = identifier_list();
 			Expect(121);
-			subType = subtype_indication();
+			SubTypeIndication subType = subtype_indication();
 			Expect(114);
 			elements.append(new RecordTypeDefinition.Element(list, subType));
 		}
 		Expect(31);
 		Expect(74);
 		if (la.kind == 5 || la.kind == 6) {
-			endIdentifier = identifier();
+			unused_identifier();
 		}
-		recordTypeDef=new RecordTypeDefinition(pos,id,elements.toList(),endIdentifier);
+		recordTypeDef=new RecordTypeDefinition(pos,id,elements.toList());
 		return recordTypeDef;
 	}
 
@@ -1335,51 +1396,52 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	ProtectedTypeBodyDeclaration  protected_type_body(Identifier id,Position pos) {
 		ProtectedTypeBodyDeclaration  protectedTypeBody;
-		ListBuffer<DeclarativeItem> items=new ListBuffer<DeclarativeItem>(); 
+		MyListBuffer<DeclarativeItem> items=new MyListBuffer<DeclarativeItem>(); 
 		Expect(71);
 		Expect(20);
 		while (StartOf(11)) {
-			item = protected_type_body_declarative_item();
+			DeclarativeItem item = protected_type_body_declarative_item();
 			items.append(item);
 		}
 		Expect(31);
 		Expect(71);
 		Expect(20);
 		if (la.kind == 5 || la.kind == 6) {
-			endIdentifier = identifier();
+			unused_identifier();
 		}
-		protectedTypeBody=new ProtectedTypeBodyDeclaration(pos,id,items.toList(),endIdentifier);
+		protectedTypeBody=new ProtectedTypeBodyDeclaration(pos,id,items.toList());
 		return protectedTypeBody;
 	}
 
 	ProtectedTypeDeclaration  protected_type_declaration(Identifier id,Position pos) {
 		ProtectedTypeDeclaration  protectedTypeDecl;
-		ListBuffer<DeclarativeItem> items=new ListBuffer<DeclarativeItem>(); 
+		MyListBuffer<DeclarativeItem> items=new MyListBuffer<DeclarativeItem>(); 
 		Expect(71);
 		while (StartOf(13)) {
-			item = protected_type_declarative_item();
+			DeclarativeItem item = protected_type_declarative_item();
 			items.append(item);
 		}
 		Expect(31);
 		Expect(71);
 		if (la.kind == 5 || la.kind == 6) {
-			endIdentifier = identifier();
+			unused_identifier();
 		}
-		protectedTypeDecl=new ProtectedTypeDeclaration(pos,id,items.toList(),endIdentifier);
+		protectedTypeDecl=new ProtectedTypeDeclaration(pos,id,items.toList());
 		return protectedTypeDecl;
 	}
 
 	SubTypeIndication  subtype_indication() {
 		SubTypeIndication  subType;
-		n1 = selected_name();
+		Object constraint=null;SelectedName n2=null;
+		SelectedName n1 = selected_name();
 		if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
 			n2 = selected_name();
 		}
 		if (la.kind == 73 || la.kind == 117) {
 			constraint = constraint();
 		}
-		if (n2!=null) subType=new SubTypeIndication(n1,n2,constraint);
-		else subType=new SubTypeIndication(None,n1,constraint);
+		if (n2!=null) subType=new SubTypeIndication(new Some(n1),n2,toOption(constraint));
+		else subType=new SubTypeIndication(scala.None$.MODULE$,n1,toOption(constraint));
 		
 		return subType;
 	}
@@ -1397,6 +1459,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Identifier  alias_designator() {
 		Identifier  identifier;
+		identifier=null;
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
 		} else if (la.kind == 4) {
@@ -1405,13 +1468,13 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		} else if (la.kind == 7) {
 			Get();
 			identifier=toIdentifier(t);
-		} else SynErr(148);
+		} else SynErr(149);
 		return identifier;
 	}
 
 	Name  name() {
 		Name  name;
-		ListBuffer<Name.Part> parts=new ListBuffer<Name.Part>();
+		MyListBuffer<Name.Part> parts=new MyListBuffer<Name.Part>();
 		Identifier prefix = name_prefix();
 		name =new Name(prefix,parts.toList());
 		return name;
@@ -1419,6 +1482,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Signature  signature() {
 		Signature  signature;
+		Seq<SelectedName> list=null;SelectedName returnType=null;
 		Expect(119);
 		if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
 			list = selected_name_list();
@@ -1428,14 +1492,17 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			returnType = type_mark();
 		}
 		Expect(120);
-		signature =new Signature(list,returnType);
+		signature =new Signature(toOption(list),toOption(returnType));
 		return signature;
 	}
 
 	Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>  entity_name_list() {
 		Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>  list;
+		MyListBuffer<Tuple2<Identifier,Option<Signature>>> elements=new MyListBuffer<Tuple2<Identifier,Option<Signature>>>();
+		Tuple2<Identifier,Option<Signature>> designator=null;
+		list=null;
+		
 		if (StartOf(15)) {
-			ListBuffer<Tuple2<Identifier,Option<Signature>>> elements=new ListBuffer<Tuple2<Identifier,Option<Signature>>>(); 
 			designator = entity_designator();
 			elements.append(designator); 
 			while (la.kind == 115) {
@@ -1450,120 +1517,120 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		} else if (la.kind == 12) {
 			Get();
 			list=new Right(toIdentifier(t));
-		} else SynErr(149);
+		} else SynErr(150);
 		return list;
 	}
 
 	EntityClass.Value  entity_class() {
 		EntityClass.Value  entityClass;
+		entityClass=null;
 		switch (la.kind) {
 		case 32: {
 			Get();
-			entityClass=EntityClass.ENTITY;
+			entityClass=EntityClass.ENTITY();
 			break;
 		}
 		case 14: {
 			Get();
-			entityClass=EntityClass.ARCHITECTURE;
+			entityClass=EntityClass.ARCHITECTURE();
 			break;
 		}
 		case 25: {
 			Get();
-			entityClass=EntityClass.CONFIGURATION;
+			entityClass=EntityClass.CONFIGURATION();
 			break;
 		}
 		case 66: {
 			Get();
-			entityClass=EntityClass.PACKAGE;
+			entityClass=EntityClass.PACKAGE();
 			break;
 		}
 		case 69: {
 			Get();
-			entityClass=EntityClass.PROCEDURE;
+			entityClass=EntityClass.PROCEDURE();
 			break;
 		}
 		case 36: {
 			Get();
-			entityClass=EntityClass.FUNCTION;
+			entityClass=EntityClass.FUNCTION();
 			break;
 		}
 		case 94: {
 			Get();
-			entityClass=EntityClass.TYPE;
+			entityClass=EntityClass.TYPE();
 			break;
 		}
 		case 90: {
 			Get();
-			entityClass=EntityClass.SUBTYPE;
+			entityClass=EntityClass.SUBTYPE();
 			break;
 		}
 		case 26: {
 			Get();
-			entityClass=EntityClass.CONSTANT;
+			entityClass=EntityClass.CONSTANT();
 			break;
 		}
 		case 85: {
 			Get();
-			entityClass=EntityClass.SIGNAL;
+			entityClass=EntityClass.SIGNAL();
 			break;
 		}
 		case 99: {
 			Get();
-			entityClass=EntityClass.VARIABLE;
+			entityClass=EntityClass.VARIABLE();
 			break;
 		}
 		case 34: {
 			Get();
-			entityClass=EntityClass.FILE;
+			entityClass=EntityClass.FILE();
 			break;
 		}
 		case 24: {
 			Get();
-			entityClass=EntityClass.COMPONENT;
+			entityClass=EntityClass.COMPONENT();
 			break;
 		}
 		case 47: {
 			Get();
-			entityClass=EntityClass.LABEL;
+			entityClass=EntityClass.LABEL();
 			break;
 		}
 		case 50: {
 			Get();
-			entityClass=EntityClass.LITERAL;
+			entityClass=EntityClass.LITERAL();
 			break;
 		}
 		case 96: {
 			Get();
-			entityClass=EntityClass.UNITS;
+			entityClass=EntityClass.UNITS();
 			break;
 		}
 		case 39: {
 			Get();
-			entityClass=EntityClass.GROUP;
+			entityClass=EntityClass.GROUP();
 			break;
 		}
-		default: SynErr(150); break;
+		default: SynErr(151); break;
 		}
 		return entityClass;
 	}
 
 	Tuple2<Identifier,Option<Signature>>  entity_designator() {
 		Tuple2<Identifier,Option<Signature>>  designator;
-		Identifier id=null; 
+		Identifier identifier=null; 
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
-			id=identifier;
 		} else if (la.kind == 4) {
 			Get();
-			id=toIdentifier(t);
+			identifier=toIdentifier(t);
 		} else if (la.kind == 7) {
 			Get();
-			id=toIdentifier(t);
-		} else SynErr(151);
+			identifier=toIdentifier(t);
+		} else SynErr(152);
 		if (la.kind == 119) {
 			sig = signature();
 		}
-		designator=new Tuple2<Identifier,Option<Signature>>(id,new Option<Signature>(sig)); 
+		designator=new Tuple2<Identifier,Option<Signature>>(identifier,new Option<Signature>(sig)); 
 		return designator;
 	}
 
@@ -1580,8 +1647,9 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Either<Seq<Identifier>,Identifier>  instantiation_list() {
 		Either<Seq<Identifier>,Identifier>  list;
+		list=null;
 		if (la.kind == 5 || la.kind == 6) {
-			list = identifier_list();
+			Seq<.Identifier.> identifierList = identifier_list();
 			list=new Left(list);
 		} else if (la.kind == 64) {
 			Get();
@@ -1589,25 +1657,25 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		} else if (la.kind == 12) {
 			Get();
 			list=new Right(toIdentifier(t));
-		} else SynErr(152);
+		} else SynErr(153);
 		return list;
 	}
 
 	void entity_aspect() {
 		if (la.kind == 32) {
 			Get();
-			entity_name = selected_name();
+			SelectedName entity_name = selected_name();
 			if (la.kind == 117) {
 				Get();
-				architecture_identifier = identifier();
+				Identifier architecture_identifier = identifier();
 				Expect(118);
 			}
 		} else if (la.kind == 25) {
 			Get();
-			configuration_name = selected_name();
+			SelectedName configuration_name = selected_name();
 		} else if (la.kind == 62) {
 			Get();
-		} else SynErr(153);
+		} else SynErr(154);
 	}
 
 	AssociationList  generic_map_aspect() {
@@ -1632,7 +1700,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Seq<SelectedName>  selected_name_list() {
 		Seq<SelectedName>  list;
-		ListBuffer<SelectedName> tmpList=new ListBuffer<SelectedName>();
+		MyListBuffer<SelectedName> tmpList=new MyListBuffer<SelectedName>();
 		SelectedName name;
 		
 		name = selected_name();
@@ -1648,7 +1716,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	GroupTemplateDeclaration.Element  entity_class_entry() {
 		GroupTemplateDeclaration.Element  entry;
-		entityClass = entity_class();
+		EntityClass.Value  entityClass = entity_class();
 		if (la.kind == 112) {
 			Get();
 		}
@@ -1658,7 +1726,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Seq<Either<Name,Identifier>>  group_constituent_list() {
 		Seq<Either<Name,Identifier>>  list;
-		ListBuffer<Either<Name,Identifier>> elements=new ListBuffer<Either<Name,Identifier>>(); 
+		MyListBuffer<Either<Name,Identifier>> elements=new MyListBuffer<Either<Name,Identifier>>(); 
 		Either<Name,Identifier> element=null;
 		
 		element = group_constituent();
@@ -1674,26 +1742,27 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Either<Name,Identifier>  group_constituent() {
 		Either<Name,Identifier>  constituent;
+		constituent=null;
 		if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
-			name = name();
+			Name name = name();
 			constituent=new Left(name);
 		} else if (la.kind == 4) {
 			Get();
 			constituent=new Right(toIdentifier(t));
-		} else SynErr(154);
+		} else SynErr(155);
 		return constituent;
 	}
 
 	Identifier  enumeration_literal() {
-		Identifier  id;
+		Identifier  identifier;
+		identifier=null;
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
-			id=identifier;
 		} else if (la.kind == 4) {
 			Get();
-			id=toIdentifier(t);
-		} else SynErr(155);
-		return id;
+			identifier=toIdentifier(t);
+		} else SynErr(156);
+		return identifier;
 	}
 
 	Range  range() {
@@ -1704,14 +1773,14 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	PhysicalTypeDefinition  physical_type_definition(Identifier id,Position pos) {
 		PhysicalTypeDefinition  physicalTypeDef;
-		ListBuffer<PhysicalTypeDefinition.Element> elements=new ListBuffer<PhysicalTypeDefinition.Element>(); 
+		MyListBuffer<PhysicalTypeDefinition.Element> elements=new MyListBuffer<PhysicalTypeDefinition.Element>(); 
 		Expect(73);
-		range = range();
+		Range range = range();
 		Expect(96);
-		baseIdentifier = identifier();
+		Identifier baseIdentifier = identifier();
 		Expect(114);
 		while (la.kind == 5 || la.kind == 6) {
-			identifier = identifier();
+			Identifier identifier = identifier();
 			Expect(128);
 			literal = physical_literal();
 			Expect(114);
@@ -1720,9 +1789,9 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		Expect(31);
 		Expect(96);
 		if (la.kind == 5 || la.kind == 6) {
-			endIdent = identifier();
+			unused_identifier();
 		}
-		physicalTypeDef=new PhysicalTypeDefinition(pos,id,range,baseIdentifier,elements.toList(),endIdent.id);
+		physicalTypeDef=new PhysicalTypeDefinition(pos,id,range,baseIdentifier,elements.toList());
 		return physicalTypeDef;
 	}
 
@@ -1742,20 +1811,21 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	DeclarativeItem  protected_type_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(8)) {
 			item = subprogram_declartion_or_body();
 		} else if (la.kind == 17) {
 			item = attribute_specification();
 		} else if (la.kind == 98) {
 			item = use_clause();
-		} else SynErr(156);
+		} else SynErr(157);
 		return item;
 	}
 
 	DeclarativeItem  protected_type_body_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(8)) {
-			item=null;
 			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
 			item = type_declaration();
@@ -1779,19 +1849,20 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			item = group_template_declaration();
 		} else if (la.kind == 39) {
 			item = group_declaration();
-		} else SynErr(157);
+		} else SynErr(158);
 		return item;
 	}
 
 	Either<Range,Seq<DiscreteRange>>  constraint() {
 		Either<Range,Seq<DiscreteRange>>  constraint;
+		constraint=null;
 		if (la.kind == 73) {
-			rangeContraint = range_constraint();
+			Range rangeContraint = range_constraint();
 			constraint = new Left(rangeContraint);
 		} else if (la.kind == 117) {
-			ranges = index_constraint();
+			Seq<.DiscreteRange.> ranges = index_constraint();
 			constraint = new Right(ranges);
-		} else SynErr(158);
+		} else SynErr(159);
 		return constraint;
 	}
 
@@ -1799,25 +1870,24 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		Range.Direction.Value  rangeDirection;
 		if (la.kind == 92) {
 			Get();
-			rangeDirection=Range.Direction.To;
+			rangeDirection=Range.Direction.To();
 		} else if (la.kind == 28) {
 			Get();
-			rangeDirection=Range.Direction.Downto;
-		} else SynErr(159);
+			rangeDirection=Range.Direction.Downto();
+		} else SynErr(160);
 		return rangeDirection;
 	}
 
 	Range  range_constraint() {
 		Range  rangeContraint;
 		Expect(73);
-		range = range();
-		rangeContraint=range;
+		rangeContraint = range();
 		return rangeContraint;
 	}
 
 	Seq<DiscreteRange>  index_constraint() {
 		Seq<DiscreteRange>  ranges;
-		ListBuffer<DiscreteRange> list=new ListBuffer<DiscreteRange>();
+		MyListBuffer<DiscreteRange> list=new MyListBuffer<DiscreteRange>();
 		DiscreteRange discreteRange=null;
 		
 		Expect(117);
@@ -1835,22 +1905,22 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	DiscreteRange  discrete_range() {
 		DiscreteRange  discreteRange;
-		range = range();
+		Range range = range();
 		discreteRange=new DiscreteRange(new Left(range));
 		return discreteRange;
 	}
 
 	ConcurrentStatement  architecture_statement() {
 		ConcurrentStatement  concurrentStmt;
+		concurrentStmt=null;
+		Identifier label=null;
+		
 		if (la.kind == 5 || la.kind == 6) {
-			concurrentStmt=null;
-			Identifier label=null;
-			
 			label = label_colon();
 			concurrentStmt = architecture_statement_optional_label(label);
 		} else if (StartOf(9)) {
 			concurrentStmt = architecture_statement_optional_label(label);
-		} else SynErr(160);
+		} else SynErr(161);
 		return concurrentStmt;
 	}
 
@@ -1863,37 +1933,38 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	ConcurrentStatement  architecture_statement_optional_label(Identifier label) {
 		ConcurrentStatement  concurrentStmt;
+		concurrentStmt=null;boolean postponed=false;
 		if (la.kind == 68) {
 			Get();
+			postponed=true;
 		}
 		if (la.kind == 70) {
-			stmt = process_statement(label,postponed!=null);
-			concurrentStmt=stmt;
+			concurrentStmt = process_statement(label,postponed);
 		} else if (la.kind == 16) {
-			stmt = concurrent_assertion_statement(label,postponed!=null);
-			concurrentStmt=stmt;
+			concurrentStmt = concurrent_assertion_statement(label,postponed);
 		} else if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
-			stmt = concurrent_procedure_call_statement(label,postponed!=null);
-			concurrentStmt=stmt;
-		} else SynErr(161);
+			concurrentStmt = concurrent_procedure_call_statement(label,postponed);
+		} else SynErr(162);
 		return concurrentStmt;
 	}
 
 	ConcurrentStatement  architecture_statement_with_label(Identifier label) {
 		ConcurrentStatement  concurrentStmt;
+		concurrentStmt=null;
 		if (la.kind == 38 || la.kind == 67 || la.kind == 114) {
 			concurrentStmt = component_instantiation_statement(label);
 		} else if (la.kind == 19) {
 			concurrentStmt = block_statement(label);
 		} else if (la.kind == 35 || la.kind == 41) {
 			concurrentStmt = generate_statement(label);
-		} else SynErr(162);
+		} else SynErr(163);
 		return concurrentStmt;
 	}
 
 	ComponentInstantiationStatement  component_instantiation_statement(Identifier label) {
 		ComponentInstantiationStatement  stmt;
 		ComponentInstantiationStatement.ComponentType.Value componentType =null;
+		AssociationList genericMap=null,portMap=null;
 		Token firstToken=la;
 		
 		if (la.kind == 38) {
@@ -1910,7 +1981,10 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 	BlockStatement  block_statement(Identifier label) {
 		BlockStatement  blockStmt;
 		Position pos=toPosition(la);
-		ListBuffer<DeclarativeItem> declItem=new ListBuffer<DeclarativeItem>(); 
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>(); 
+		Expression guard_expression=null;
+		InterfaceList genericClause=null,portClause=null;
+		AssociationList genericMap=null,portMap=null;
 		
 		Expect(19);
 		if (la.kind == 117) {
@@ -1936,36 +2010,37 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			}
 		}
 		while (StartOf(3)) {
-			item = block_declarative_item();
-			declItems.append(item);
+			DeclarativeItem item = block_declarative_item();
+			declarativeItems.append(item);
 		}
 		Expect(18);
-		statementList = architecture_statement_list();
+		Seq<.ConcurrentStatement.> statementList = architecture_statement_list();
 		Expect(31);
 		Expect(19);
 		if (la.kind == 5 || la.kind == 6) {
-			end_block_label = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		blockStmt=new BlockStatement(pos,label,guard_expression,genericClause,genericMap,portClause,portMap,declItems.toList(),statementList,end_block_label);
+		blockStmt=new BlockStatement(pos,toOption(label),toOption(guard_expression),toOption(genericClause),toOption(genericMap),toOption(portClause),toOption(portMap),declarativeItems.toList(),statementList);
 		return blockStmt;
 	}
 
 	ConcurrentStatement  generate_statement(Identifier label) {
 		ConcurrentStatement  generateStmt;
+		generateStmt=null;
 		if (la.kind == 35) {
-			generateStmt=null;
 			generateStmt = for_generate_statement(label);
 		} else if (la.kind == 41) {
 			generateStmt = if_generate_statement(label);
-		} else SynErr(163);
+		} else SynErr(164);
 		return generateStmt;
 	}
 
-	ProcessStatement  process_statement(Identifier label,Boolean postponed) {
+	ProcessStatement  process_statement(Identifier label,boolean postponed) {
 		ProcessStatement  processStmt;
 		Position pos=toPosition(la);
-		ListBuffer<DeclarativeItem> declItem=new ListBuffer<DeclarativeItem>(); 
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>();
+		Seq<Name> name_list=null;
 		
 		Expect(70);
 		if (la.kind == 117) {
@@ -1977,29 +2052,29 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			Get();
 		}
 		while (StartOf(11)) {
-			item = process_declarative_item();
-			declItem.append(item);
+			DeclarativeItem item = process_declarative_item();
+			declarativeItems.append(item);
 		}
 		Expect(18);
-		sequentialStatements = sequential_statement_list();
+		Seq<.SequentialStatement.> sequentialStatements = sequential_statement_list();
 		Expect(31);
 		if (la.kind == 68) {
 			Get();
 		}
 		Expect(70);
 		if (la.kind == 5 || la.kind == 6) {
-			end_process_label = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		processStmt=new ProcessStatement(pos,label,postponed,name_list,declItem.toList(),sequentialStatements,end_process_label);
+		processStmt=new ProcessStatement(pos,toOption(label),postponed,toOption(name_list),declarativeItems.toList(),sequentialStatements);
 		return processStmt;
 	}
 
-	ConcurrentAssertionStatement  concurrent_assertion_statement(Identifier label,Boolean postponed) {
+	ConcurrentAssertionStatement  concurrent_assertion_statement(Identifier label,boolean postponed) {
 		ConcurrentAssertionStatement  assertStmt;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression report_expression=null,severity_expression=null;
 		Expect(16);
-		expr = condition();
+		Expression expr = condition();
 		if (la.kind == 78) {
 			Get();
 			report_expression = expression();
@@ -2009,26 +2084,27 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			severity_expression = expression();
 		}
 		Expect(114);
-		assertStmt=new ConcurrentAssertionStatement(pos,label,postponed,expr,report_expression,severity_expression);
+		assertStmt=new ConcurrentAssertionStatement(pos,toOption(label),postponed,expr,toOption(report_expression),toOption(severity_expression));
 		return assertStmt;
 	}
 
-	ConcurrentProcedureCallStatement  concurrent_procedure_call_statement(Identifier label,Boolean postponed) {
+	ConcurrentProcedureCallStatement  concurrent_procedure_call_statement(Identifier label,boolean postponed) {
 		ConcurrentProcedureCallStatement  procedureCallStmt;
+		AssociationList paramterList=null;
 		SelectedName procedure_name = selected_name();
 		if (la.kind == 117) {
 			Get();
-			associationList = association_list();
+			paramterList = association_list();
 			Expect(118);
 		}
 		Expect(114);
-		procedureCallStmt=new ConcurrentProcedureCallStatement(label,postponed,procedure_name,associationList);
+		procedureCallStmt=new ConcurrentProcedureCallStatement(toOption(label),postponed,procedure_name,toOption(paramterList));
 		return procedureCallStmt;
 	}
 
 	AssociationList  association_list() {
 		AssociationList  list;
-		ListBuffer<AssociationList.Element> elements=new ListBuffer<AssociationList.Element>();
+		MyListBuffer<AssociationList.Element> elements=new MyListBuffer<AssociationList.Element>();
 		AssociationList.Element element=null;
 		
 		element = association_element();
@@ -2044,14 +2120,14 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Seq<Name>  name_list() {
 		Seq<Name>  list;
-		ListBuffer<Name> tmpList=new ListBuffer<Name>();
+		MyListBuffer<Name> tmpList=new MyListBuffer<Name>();
 		
-		n1 = name();
-		tmpList.append(n1);
+		Name name = name();
+		tmpList.append(name);
 		while (la.kind == 115) {
 			Get();
-			n2 = name();
-			tmpList.append(n2);
+			name = name();
+			tmpList.append(name);
 		}
 		list=tmpList.toList();
 		return list;
@@ -2059,8 +2135,8 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	DeclarativeItem  process_declarative_item() {
 		DeclarativeItem  item;
+		item=null;
 		if (StartOf(8)) {
-			item=null;
 			item = subprogram_declartion_or_body();
 		} else if (la.kind == 94) {
 			item = type_declaration();
@@ -2084,29 +2160,28 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			item = group_template_declaration();
 		} else if (la.kind == 39) {
 			item = group_declaration();
-		} else SynErr(164);
+		} else SynErr(165);
 		return item;
 	}
 
 	Expression  condition() {
-		Expression  con;
+		Expression  expr;
 		expr = expression();
-		con=expr;
-		return con;
+		return expr;
 	}
 
-	void concurrent_signal_assignment_statement(ConcurrentSignalAssignmentStatement signalAssignmentStatement, Identifier label,Boolean postponed) {
+	void concurrent_signal_assignment_statement(ConcurrentSignalAssignmentStatement signalAssignmentStatement, Identifier label,boolean postponed) {
 		if (StartOf(16)) {
 			signalAssignmentStatement = conditional_signal_assignment(label,postponed);
 		} else if (la.kind == 103) {
 			signalAssignmentStatement = selected_signal_assignment(label,postponed);
-		} else SynErr(165);
+		} else SynErr(166);
 	}
 
-	ConcurrentConditionalSignalAssignment  conditional_signal_assignment(Identifier label,Boolean postponed) {
+	ConcurrentConditionalSignalAssignment  conditional_signal_assignment(Identifier label,boolean postponed) {
 		ConcurrentConditionalSignalAssignment  signalAssignment;
-		ListBuffer<ConcurrentConditionalSignalAssignment.When> elements=new ListBuffer<ConcurrentConditionalSignalAssignment.When>();
-		target = target();
+		MyListBuffer<ConcurrentConditionalSignalAssignment.When> elements=new MyListBuffer<ConcurrentConditionalSignalAssignment.When>();
+		Target target = target();
 		Expect(107);
 		if (la.kind == 40) {
 			Get();
@@ -2120,15 +2195,15 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		return signalAssignment;
 	}
 
-	ConcurrentSelectedSignalAssignment  selected_signal_assignment(Identifier label,Boolean postponed) {
+	ConcurrentSelectedSignalAssignment  selected_signal_assignment(Identifier label,boolean postponed) {
 		ConcurrentSelectedSignalAssignment  signalAssignment;
 		Position pos=toPosition(la);
-		ListBuffer<ConcurrentSelectedSignalAssignment.When> elements=new ListBuffer<ConcurrentSelectedSignalAssignment.When>(); 
+		MyListBuffer<ConcurrentSelectedSignalAssignment.When> elements=new MyListBuffer<ConcurrentSelectedSignalAssignment.When>(); 
 		
 		Expect(103);
-		expr = expression();
+		Expression expr = expression();
 		Expect(82);
-		target = target();
+		Target target = target();
 		Expect(107);
 		if (la.kind == 40) {
 			Get();
@@ -2136,12 +2211,12 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		if (la.kind == 44 || la.kind == 76 || la.kind == 93) {
 			delay = delay_mechanism();
 		}
-		s1 = selected_waveform();
-		elements.append(s1);
+		Waveform waveform = selected_waveform();
+		elements.append(waveform);
 		while (la.kind == 115) {
 			Get();
-			s2 = selected_waveform();
-			elements.append(s2);
+			waveform = selected_waveform();
+			elements.append(waveform);
 		}
 		Expect(114);
 		signalAssignment=new ConcurrentSelectedSignalAssignment(pos,label,postponed,expr,target,$GUARDED!=null,delay,elements.toList());
@@ -2150,18 +2225,20 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Target  target() {
 		Target  target;
+		target=null;
 		if (la.kind == 5 || la.kind == 6 || la.kind == 7) {
-			name = name();
+			Name name = name();
 			target = new Target(new Left(name));
 		} else if (la.kind == 117) {
-			aggregate = aggregate();
+			Aggregate aggregate = aggregate();
 			target = new Target(new Right(aggregate));
-		} else SynErr(166);
+		} else SynErr(167);
 		return target;
 	}
 
 	DelayMechanism  delay_mechanism() {
 		DelayMechanism  mechanism;
+		Expression time_expression=null;
 		if (la.kind == 93) {
 			Get();
 		} else if (la.kind == 44 || la.kind == 76) {
@@ -2170,15 +2247,16 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 				time_expression = expression();
 			}
 			Expect(44);
-			if (time_expression==null) mechanism=new DelayMechanism(DelayMechanism.DelayType.TRANSPORT,None);
-			else mechanism=new DelayMechanism(DelayMechanism.DelayType.INERTIAL,time_expression);
-			
-		} else SynErr(167);
+		} else SynErr(168);
+		if (time_expression==null) mechanism=new DelayMechanism(DelayMechanism.DelayType.TRANSPORT,scala.None$.MODULE$);
+		else mechanism=new DelayMechanism(DelayMechanism.DelayType.INERTIAL,time_expression);
+		
 		return mechanism;
 	}
 
-	void conditional_waveforms(ListBuffer<Object> elements) {
-		waveform = waveform();
+	void conditional_waveforms(MyListBuffer elements) {
+		Expression expr=null;
+		Waveform waveform = waveform();
 		if (la.kind == 101) {
 			Get();
 			expr = condition();
@@ -2192,40 +2270,40 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Waveform  waveform() {
 		Waveform  waveForm;
+		MyListBuffer<Waveform.Element> elements=new MyListBuffer<Waveform.Element>();
 		if (StartOf(17)) {
-			ListBuffer<Waveform.Element> elements=new ListBuffer<Waveform.Element>();
-			e1 = waveform_element();
-			elements.append(e1);
+			Waveform.Element element = waveform_element();
+			elements.append(element);
 			while (la.kind == 115) {
 				Get();
-				e2 = waveform_element();
-				elements.append(e2);
+				element = waveform_element();
+				elements.append(element);
 			}
 		} else if (la.kind == 95) {
 			Get();
-			waveForm=new Waveform(toPosition(firstToken),elements.toList());
-		} else SynErr(168);
+		} else SynErr(169);
+		waveForm=new Waveform(elements.toList());
 		return waveForm;
 	}
 
 	ConcurrentSelectedSignalAssignment.When  selected_waveform() {
 		ConcurrentSelectedSignalAssignment.When  whenClause;
-		waveform = waveform();
+		Waveform waveform = waveform();
 		Expect(101);
-		choices = choices();
+		Choices choices = choices();
 		whenClause = new ConcurrentSelectedSignalAssignment.When(waveform,choices);
 		return whenClause;
 	}
 
 	Choices  choices() {
 		Choices  choices;
-		ListBuffer<Choices.Choice> elements=new ListBuffer<Choices.Choice>(); 
-		c1 = choice();
-		elements.append(c1);
+		MyListBuffer<Choices.Choice> elements=new MyListBuffer<Choices.Choice>(); 
+		Choices.Choice choice = choice();
+		elements.append(choice);
 		while (la.kind == 129) {
 			Get();
-			c2 = choice();
-			elements.append(c2);
+			choice = choice();
+			elements.append(choice);
 		}
 		choices =new Choices(elements.toList());
 		return choices;
@@ -2233,14 +2311,14 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Aggregate  aggregate() {
 		Aggregate  aggregate;
-		ListBuffer<Aggregate.ElementAssociation> elements=new ListBuffer<Aggregate.ElementAssociation>(); 
+		MyListBuffer<Aggregate.ElementAssociation> elements=new MyListBuffer<Aggregate.ElementAssociation>(); 
 		Expect(117);
-		e1 = element_association();
-		elements.append(e1);
+		Aggregate.ElementAssociation element = element_association();
+		elements.append(element);
 		while (la.kind == 115) {
 			Get();
-			e2 = element_association();
-			elements.append(e2);
+			element = element_association();
+			elements.append(element);
 		}
 		Expect(118);
 		aggregate =new Aggregate(elements.toList());
@@ -2251,18 +2329,18 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		ForGenerateStatement  forGenerateStmt;
 		Position pos=toPosition(la);
 		Expect(35);
-		loopIdentifier = identifier();
+		Identifier loopIdentifier = identifier();
 		Expect(43);
-		discreteRange = discrete_range();
+		DiscreteRange discreteRange = discrete_range();
 		Expect(37);
 		body = generate_statement_body();
 		Expect(31);
 		Expect(37);
 		if (la.kind == 5 || la.kind == 6) {
-			end_generate_label = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		forGenerateStmt=new ForGenerateStatement(pos,label,loopIdentifier,discreteRange,$body.blockItems,$body.statementList,end_generate_label);
+		forGenerateStmt=new ForGenerateStatement(pos,label,loopIdentifier,discreteRange,$body.blockItems,$body.statementList);
 		return forGenerateStmt;
 	}
 
@@ -2270,26 +2348,26 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		IfGenerateStatement  ifGenerateStmt;
 		Position pos=toPosition(la);
 		Expect(41);
-		expr = condition();
+		Expression expr = condition();
 		Expect(37);
 		body = generate_statement_body();
 		Expect(31);
 		Expect(37);
 		if (la.kind == 5 || la.kind == 6) {
-			end_generate_label = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		ifGenerateStmt=new IfGenerateStatement(pos,label,expr,body._1,body._2,end_generate_label);
+		ifGenerateStmt=new IfGenerateStatement(pos,label,expr,body._1,body._2);
 		return ifGenerateStmt;
 	}
 
 	Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>  generate_statement_body() {
 		Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>  statementList;
-		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
+		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>();
 		
 		if (StartOf(18)) {
 			while (StartOf(3)) {
-				item = block_declarative_item();
+				DeclarativeItem item = block_declarative_item();
 				declarativeItems.append(item);
 			}
 			Expect(18);
@@ -2302,7 +2380,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	SequentialStatement  sequential_statement() {
 		SequentialStatement  sequentialStatement;
-		sequentialStatement=null;
+		sequentialStatement=null;Identifier label=null;
 		if (la.kind == 5 || la.kind == 6) {
 			label = label_colon();
 		}
@@ -2351,14 +2429,14 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			sequentialStatement = procedure_call_statement(label);
 			break;
 		}
-		default: SynErr(169); break;
+		default: SynErr(170); break;
 		}
 		return sequentialStatement;
 	}
 
 	WaitStatement  wait_statement(Identifier label) {
 		WaitStatement  waitStmt;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression untilExpr=null,forExpression=null;Seq<Name> name_list=null;
 		Expect(100);
 		if (la.kind == 61) {
 			Get();
@@ -2373,15 +2451,15 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			forExpression = expression();
 		}
 		Expect(114);
-		waitStmt=new WaitStatement(pos,label,name_list,untilExpr,forExpression);
+		waitStmt=new WaitStatement(pos,toOption(label),toOption(name_list),toOption(untilExpr),toOption(forExpression));
 		return waitStmt;
 	}
 
 	AssertStatement  assertion_statement(Identifier label) {
 		AssertStatement  assertStmt;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression report_expression=null, severity_expression= null;
 		Expect(16);
-		expr = condition();
+		Expression expr = condition();
 		if (la.kind == 78) {
 			Get();
 			report_expression = expression();
@@ -2391,40 +2469,42 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			severity_expression = expression();
 		}
 		Expect(114);
-		assertStmt=new AssertStatement(pos,label,expr,report_expression,severity_expression);
+		assertStmt=new AssertStatement(pos,toOption(label),expr,toOption(report_expression),toOption(severity_expression));
 		return assertStmt;
 	}
 
 	ReportStatement  report_statement(Identifier label) {
 		ReportStatement  reportStmt;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression severity_expression=null;
 		Expect(78);
-		report_expression = expression();
+		Expression report_expression = expression();
 		if (la.kind == 83) {
 			Get();
 			severity_expression = expression();
 		}
 		Expect(114);
-		reportStmt=new ReportStatement(pos,label,report_expression,severity_expression);
+		reportStmt=new ReportStatement(pos,toOption(label),report_expression,toOption(severity_expression));
 		return reportStmt;
 	}
 
 	IfStatement  if_statement(Identifier label) {
 		IfStatement  ifStmt;
 		Position pos=toPosition(la); 
-		ListBuffer<IfStatement.IfThenPart> ifList=new ListBuffer<IfStatement.IfThenPart>(); 
+		MyListBuffer<IfStatement.IfThenPart> ifList=new MyListBuffer<IfStatement.IfThenPart>(); 
+		Seq<SequentialStatement> sequentialStatements = null;
+		Seq<SequentialStatement> else_sequential_statement = null;
 		
 		Expect(41);
-		if_condition = condition();
+		Expression if_condition = condition();
 		Expect(91);
-		if_sequential_statement = sequential_statement_list();
-		ifList.append(new IfStatement.IfThenPart(if_condition,if_sequential_statement));
+		sequentialStatements = sequential_statement_list();
+		ifList.append(new IfStatement.IfThenPart(if_condition,sequentialStatements));
 		while (la.kind == 30) {
 			Get();
-			elsif_condition = condition();
+			Expression elsif_condition = condition();
 			Expect(91);
-			elsif_sequential_statement = sequential_statement_list();
-			ifList.append(new IfStatement.IfThenPart(elsif_condition,elsif_sequential_statement));
+			sequentialStatements = sequential_statement_list();
+			ifList.append(new IfStatement.IfThenPart(elsif_condition,sequentialStatements));
 		}
 		if (la.kind == 29) {
 			Get();
@@ -2433,35 +2513,35 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		Expect(31);
 		Expect(41);
 		if (la.kind == 5 || la.kind == 6) {
-			end_if_label = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		ifStmt=new IfStatement(pos,label,ifList.toList(),else_sequential_statement,end_if_label);
+		ifStmt=new IfStatement(pos,toOption(label),ifList.toList(),else_sequential_statement);
 		return ifStmt;
 	}
 
 	CaseStatement  case_statement(Identifier label) {
 		CaseStatement  caseStmt;
 		Position pos=toPosition(la);
-		ListBuffer<CaseStatement.When> alternatives=new ListBuffer<CaseStatement.When>(); 
+		MyListBuffer<CaseStatement.When> alternatives=new MyListBuffer<CaseStatement.When>(); 
 		
 		Expect(23);
-		expr = expression();
+		Expression expr = expression();
 		Expect(46);
 		while (la.kind == 101) {
 			Get();
-			choices = choices();
+			Choices choices = choices();
 			Expect(109);
-			sequentialStatements = sequential_statement_list();
+			Seq<.SequentialStatement.> sequentialStatements = sequential_statement_list();
 			alternatives.append(new CaseStatement.When(choices,sequentialStatements));
 		}
 		Expect(31);
 		Expect(23);
 		if (la.kind == 5 || la.kind == 6) {
-			end_case_label = identifier();
+			unused_identifier();
 		}
 		Expect(114);
-		caseStmt=new CaseStatement(pos,label,expr,alternatives.toList(),end_case_label);
+		caseStmt=new CaseStatement(pos,toOption(label),expr,alternatives.toList());
 		return caseStmt;
 	}
 
@@ -2480,16 +2560,16 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		}
 		Expect(114);
 		if (stmtType!=null){
-		if (stmtType instanceof Left) loopStmt=new WhileStatement(pos,label,((Left)stmtType).a,sequentialStatements,end_loop_label);
-		//TODO case Right((identifier,discreteRange)) =>new ForStatement(pos,label,identifier,discreteRange,sequentialStatements,end_loop_label.id);
-		}else loopStmt=new LoopStatement(pos,label,sequentialStatements,end_loop_label.id);
+		if (stmtType instanceof Left) loopStmt=new WhileStatement(pos,label,((Left)stmtType).a,sequentialStatements);
+		//TODO case Right((identifier,discreteRange)) =>new ForStatement(pos,label,identifier,discreteRange,sequentialStatements);
+		}else loopStmt=new LoopStatement(pos,label,sequentialStatements);
 		
 		return loopStmt;
 	}
 
 	NextStatement  next_statement(Identifier label) {
 		NextStatement  nextStmt;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Identifier identifier=null;Expression expr=null;
 		Expect(56);
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
@@ -2499,13 +2579,13 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			expr = condition();
 		}
 		Expect(114);
-		nextStmt=new NextStatement(pos,label,identifier,expr);
+		nextStmt=new NextStatement(pos,toOption(label),toOption(identifier),toOption(expr));
 		return nextStmt;
 	}
 
 	ExitStatement  exit_statement(Identifier label) {
 		ExitStatement  exitStmt;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression expr=null;Identifier identifier=null;
 		Expect(33);
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
@@ -2515,19 +2595,19 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			expr = condition();
 		}
 		Expect(114);
-		exitStmt=new ExitStatement(pos,label,identifier,expr);
+		exitStmt=new ExitStatement(pos,toOption(label),toOption(identifier),toOption(expr));
 		return exitStmt;
 	}
 
 	ReturnStatement  return_statement(Identifier label) {
 		ReturnStatement  returnStmt;
-		Position pos=toPosition(la);
+		Position pos=toPosition(la);Expression expr=null;
 		Expect(79);
 		if (StartOf(19)) {
 			expr = expression();
 		}
 		Expect(114);
-		returnStmt=new ReturnStatement(pos,label,expr);
+		returnStmt=new ReturnStatement(pos,toOption(label),toOption(expr));
 		return returnStmt;
 	}
 
@@ -2536,26 +2616,27 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		Position pos=toPosition(la);
 		Expect(59);
 		Expect(114);
-		nullStmt=new NullStatement(pos,label);
+		nullStmt=new NullStatement(pos,toOption(label));
 		return nullStmt;
 	}
 
 	ProcedureCallStatement  procedure_call_statement(Identifier label) {
 		ProcedureCallStatement  procedureCallStmt;
-		procedure_name = selected_name();
+		AssociationList paramterList=null;
+		SelectedName procedure_name = selected_name();
 		if (la.kind == 117) {
 			Get();
-			associationList = association_list();
+			paramterList = association_list();
 			Expect(118);
 		}
 		Expect(114);
-		procedureCallStmt=new ProcedureCallStatement(label,procedure_name,associationList);
+		procedureCallStmt=new ProcedureCallStatement(toOption(label),procedure_name,toOption(paramterList));
 		return procedureCallStmt;
 	}
 
 	SignalAssignmentStatement  signal_assignment_statement(Identifier label) {
 		SignalAssignmentStatement  signalAssignStmt;
-		target = target();
+		Target target = target();
 		Expect(107);
 		if (la.kind == 44 || la.kind == 76 || la.kind == 93) {
 			delay = delay_mechanism();
@@ -2568,94 +2649,97 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Waveform.Element  waveform_element() {
 		Waveform.Element  element;
-		value_expression = expression();
+		Expression time_expression=null;
+		Expression value_expression = expression();
 		if (la.kind == 10) {
 			Get();
 			time_expression = expression();
 		}
-		element= new Waveform.Element(value_expression,time_expression);
+		element= new Waveform.Element(value_expression,toOption(time_expression));
 		return element;
 	}
 
 	VariableAssignmentStatement  variable_assignment_statement(Identifier label) {
 		VariableAssignmentStatement  varAssignStmt;
-		target = target();
+		Target target = target();
 		Expect(111);
-		expr = expression();
+		Position pos=toPosition(t);
+		Expression expr = expression();
 		Expect(114);
-		varAssignStmt=new SimpleVariableAssignmentStatement(toPosition($VAR_ASSIGN),label,target,expr);
+		varAssignStmt=new SimpleVariableAssignmentStatement(pos,toOption(label),target,expr);
 		return varAssignStmt;
 	}
 
 	Either<Expression,Tuple2<Identifier,DiscreteRange>>  iteration_scheme() {
 		Either<Expression,Tuple2<Identifier,DiscreteRange>>  scheme;
+		scheme=null;
 		if (la.kind == 102) {
 			Get();
-			expr = condition();
+			Expression expr = condition();
 			scheme=new Left(expr);
 		} else if (la.kind == 35) {
 			Get();
-			identifier = identifier();
+			Identifier identifier = identifier();
 			Expect(43);
-			discreteRange = discrete_range();
+			DiscreteRange discreteRange = discrete_range();
 			scheme=new Right(new Tuple2(identifier,discreteRange));
-		} else SynErr(170);
+		} else SynErr(171);
 		return scheme;
 	}
 
 	InterfaceList.AbstractInterfaceElement  interface_element_procedure() {
 		InterfaceList.AbstractInterfaceElement  element;
+		element=null;
 		if (la.kind == 5 || la.kind == 6 || la.kind == 85) {
-			signalElement = interface_signal_declaration_procedure();
-			element=signalElement;
+			element = interface_signal_declaration_procedure();
 		} else if (la.kind == 34) {
-			fileElement = interface_file_declaration();
-			element=fileElement;
-		} else SynErr(171);
+			element = interface_file_declaration();
+		} else SynErr(172);
 		return element;
 	}
 
 	InterfaceList.InterfaceFileDeclaration  interface_file_declaration() {
 		InterfaceList.InterfaceFileDeclaration  fileElement;
 		Expect(34);
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		fileElement=new InterfaceList.InterfaceFileDeclaration(list,subType);
 		return fileElement;
 	}
 
 	InterfaceList.AbstractInterfaceElement  interface_element_function() {
 		InterfaceList.AbstractInterfaceElement  element;
+		element=null;
 		if (la.kind == 5 || la.kind == 6 || la.kind == 85) {
-			signalElement = interface_signal_declaration_function();
-			element=signalElement;
+			element = interface_signal_declaration_function();
 		} else if (la.kind == 34) {
-			fileElement = interface_file_declaration();
-			element=fileElement;
-		} else SynErr(172);
+			element = interface_file_declaration();
+		} else SynErr(173);
 		return element;
 	}
 
 	InterfaceList.InterfaceSignalDeclaration  interface_signal_declaration_function() {
 		InterfaceList.InterfaceSignalDeclaration  signalElement;
+		Expression expr=null;boolean bus=false;
 		if (la.kind == 85) {
 			Get();
 		}
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
 		if (la.kind == 43) {
 			Get();
 		}
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 22) {
 			Get();
+			bus=true;
 		}
 		if (la.kind == 111) {
 			Get();
 			expr = expression();
 		}
-		signalElement=new InterfaceList.InterfaceSignalDeclaration(list,InterfaceList.InterfaceMode.IN,subType,$BUS!=null,expr);
+		signalElement=new InterfaceList.InterfaceSignalDeclaration(list,InterfaceList.InterfaceMode.IN(),subType,bus,toOption(expr));
 		return signalElement;
 	}
 
@@ -2663,34 +2747,35 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		InterfaceList.InterfaceMode.Value  mode;
 		if (la.kind == 43) {
 			Get();
-			mode=InterfaceList.InterfaceMode.IN;
+			mode=InterfaceList.InterfaceMode.IN();
 		} else if (la.kind == 65) {
 			Get();
-			mode=InterfaceList.InterfaceMode.OUT;
+			mode=InterfaceList.InterfaceMode.OUT();
 		} else if (la.kind == 45) {
 			Get();
-			mode=InterfaceList.InterfaceMode.INOUT;
+			mode=InterfaceList.InterfaceMode.INOUT();
 		} else if (la.kind == 21) {
 			Get();
-			mode=InterfaceList.InterfaceMode.BUFFER;
+			mode=InterfaceList.InterfaceMode.BUFFER();
 		} else if (la.kind == 49) {
 			Get();
-			mode=InterfaceList.InterfaceMode.LINKAGE;
-		} else SynErr(173);
+			mode=InterfaceList.InterfaceMode.LINKAGE();
+		} else SynErr(174);
 		return mode;
 	}
 
 	InterfaceList.InterfaceVariableDeclaration  interface_variable_declaration() {
 		InterfaceList.InterfaceVariableDeclaration  varElement;
+		Expression expr=null;
 		if (la.kind == 99) {
 			Get();
 		}
-		list = identifier_list();
+		Seq<.Identifier.> list = identifier_list();
 		Expect(121);
 		if (StartOf(7)) {
 			mode = interface_mode();
 		}
-		subType = subtype_indication();
+		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 111) {
 			Get();
 			expr = expression();
@@ -2707,31 +2792,29 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Name  formal_part() {
 		Name  formal_part;
-		name = name();
-		formal_part = name;
+		formal_part = name();
 		return formal_part;
 	}
 
 	Option<Expression>  actual_part() {
 		Option<Expression>  actual_part;
 		if (StartOf(20)) {
-			expr = expression();
-			actual_part = expr;
+			Expression expr = expression();
+			actual_part = toOption(expr);
 		} else if (la.kind == 62) {
 			Get();
-			actual_part=None();
-		} else SynErr(174);
+			actual_part=scala.None$.MODULE$;
+		} else SynErr(175);
 		return actual_part;
 	}
 
 	Expression  relation() {
 		Expression  rel;
-		s1 = shift_expression();
-		rel=s1;
+		rel = shift_expression();
 		if (StartOf(21)) {
 			op = relational_operator();
-			s2 = shift_expression();
-			rel=new Relation(op._1,s1,op._2,s2);
+			right = shift_expression();
+			rel=new Relation(op._1,s1,op._2,right);
 		}
 		return rel;
 	}
@@ -2751,18 +2834,17 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		} else if (la.kind == 104) {
 			Get();
 			logOp=LogicalExpression.Operator.XNOR;
-		} else SynErr(175);
+		} else SynErr(176);
 		return op;
 	}
 
 	Expression  shift_expression() {
 		Expression  shiftExpr;
-		s1 = simple_expression();
-		shiftExpr=s1;
+		shiftExpr = simple_expression();
 		if (StartOf(22)) {
 			op = shift_operator();
-			s2 = simple_expression();
-			shiftExpr=new ShiftExpression(op._1,s1,op._2,s2);
+			Expression right = simple_expression();
+			shiftExpr=new ShiftExpression(op._1,shiftExpr,op._2,right);
 		}
 		return shiftExpr;
 	}
@@ -2804,7 +2886,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			op=new Tuple2<Relation.Operator.Value,Position>(relOp,pos);
 			break;
 		}
-		default: SynErr(176); break;
+		default: SynErr(177); break;
 		}
 		return op;
 	}
@@ -2814,12 +2896,12 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 		if (la.kind == 124 || la.kind == 125) {
 			sign = sign();
 		}
-		t1 = term();
-		if (s!=null) simpleExpr=new SimpleExpression(s._2,s._1,t1,None,None); else simpleExpr=t1;
+		simpleExpr = term();
+		if (s!=null) simpleExpr=new SimpleExpression(s._2,s._1,simpleExpr,scala.None$.MODULE$,scala.None$.MODULE$);
 		while (la.kind == 116 || la.kind == 124 || la.kind == 125) {
 			op = adding_operator();
-			t2 = term();
-			simpleExpr=new SimpleExpression($op.pos,None,$simpleExpr,$op.addOp,t2);
+			Expression right = term();
+			simpleExpr=new SimpleExpression($op.pos,scala.None$.MODULE$,simpleExpr,$op.addOp,right);
 		}
 		return simpleExpr;
 	}
@@ -2861,7 +2943,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			op=new Tuple2<ShiftExpression.Operator.Value,Position>(shiftOp,pos);
 			break;
 		}
-		default: SynErr(177); break;
+		default: SynErr(178); break;
 		}
 		return op;
 	}
@@ -2873,23 +2955,22 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			Position pos=toPosition(la);
 			
 			Get();
-			signOp=SimpleExpression.SignOperator.PLUS;
+			signOp=SimpleExpression.SignOperator.PLUS();
 		} else if (la.kind == 125) {
 			Get();
-			signOp=SimpleExpression.SignOperator.MINUS;
+			signOp=SimpleExpression.SignOperator.MINUS();
 			op=new Tuple2<SimpleExpression.SignOperator.Value,Position>(signOp,pos);
-		} else SynErr(178);
+		} else SynErr(179);
 		return op;
 	}
 
 	Expression  term() {
 		Expression  term;
-		f1 = factor();
-		term = f1;
+		term = factor();
 		if (StartOf(23)) {
 			op = multiplying_operator();
-			f2 = factor();
-			term = new Term(op._1,term,op._2,f2);
+			Expression right = factor();
+			term = new Term(op._1,term,op._2,right);
 		}
 		return term;
 	}
@@ -2909,7 +2990,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			Get();
 			addOp=SimpleExpression.AddOperator.AMPERSAND;
 			op=new Tuple2<SimpleExpression.AddOperator.Value,Position>(addOp,pos);
-		} else SynErr(179);
+		} else SynErr(180);
 		return op;
 	}
 
@@ -2931,132 +3012,131 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 			Get();
 			mulOp=Term.Operator.REM;
 			op=new Tuple2<SimpleExpression.AddOperator.Value,Position>(mulOp,pos);
-		} else SynErr(180);
+		} else SynErr(181);
 		return op;
 	}
 
 	Expression  factor() {
 		Expression  factor;
 		if (StartOf(24)) {
-			p1 = primary();
-			factor = p1;
+			factor = primary();
 			if (la.kind == 106) {
 				Get();
-				p2 = primary();
-				factor_ = new Factor(toPosition($DOUBLESTAR),$p1.obj,Factor.Operator.POW,$p2.obj);
+				Expression right = primary();
+				factor = new Factor(toPosition($DOUBLESTAR),factor,Factor.Operator.POW,right);
 			}
 		} else if (la.kind == 8) {
 			Get();
-			p1 = primary();
-			factor = new Factor(toPosition($ABS),p1,Factor.Operator.ABS);
+			Expression left = primary();
+			factor = new Factor(toPosition($ABS),left,Factor.Operator.ABS);
 		} else if (la.kind == 58) {
 			Get();
-			p1 = primary();
-			factor = new Factor(toPosition($NOT),p2,Factor.Operator.NOT);
-		} else SynErr(181);
+			Expression left = primary();
+			factor = new Factor(toPosition($NOT),left,Factor.Operator.NOT);
+		} else SynErr(182);
 		return factor;
 	}
 
 	Expression  primary() {
-		Expression  p;
+		Expression  expr;
+		expr=null;
 		if (StartOf(25)) {
 		} else if (la.kind == 55) {
-			allocator.newExpression = allocator();
-			p=allocator.newExpression;
+			expr = allocator();
 		} else if (la.kind == 117) {
-			aggregate = aggregate();
-			p=new AggregateExpression(aggregate);
-		} else SynErr(182);
-		return p;
+			Aggregate aggregate = aggregate();
+			expr=new AggregateExpression(aggregate);
+		} else SynErr(183);
+		return expr;
 	}
 
 	Expression  allocator() {
 		Expression  newExpression;
 		Position pos=toPosition(la);
 		Expect(55);
-		selectedName = selected_name();
+		SelectedName selectedName = selected_name();
 		if (la.kind == 3) {
-			expr = qualified_expression(selectedName);
+			Expression expr = qualified_expression(selectedName);
 			newExpression=new NewExpression(pos,new Left(expr));
 		} else if (StartOf(26)) {
 			if (la.kind == 117) {
-				constraint = index_constraint();
+				Object constraint = index_constraint();
 			}
-			newExpression=new NewExpression(pos,new Right(new SubTypeIndication(None,selectedName,new Right(ranges))));
-		} else SynErr(183);
+			newExpression=new NewExpression(pos,new Right(new SubTypeIndication(scala.None$.MODULE$,selectedName,new Right(ranges))));
+		} else SynErr(184);
 		return newExpression;
 	}
 
 	QualifiedExpression  qualified_expression(SelectedName typeName) {
 		QualifiedExpression  expr;
 		Expect(3);
-		aggregate = aggregate();
-		expr=new QualifiedExpression(typeName,new AggregateExpression($aggregate.aggregate_));
+		Aggregate aggregate = aggregate();
+		expr=new QualifiedExpression(typeName,new AggregateExpression(aggregate));
 		return expr;
 	}
 
 	FunctionCallExpression  function_call() {
 		FunctionCallExpression  functionCall;
-		function_name = selected_name();
+		AssociationList parameter_association_list=null;
+		SelectedName function_name = selected_name();
 		if (la.kind == 117) {
 			Get();
 			parameter_association_list = association_list();
 			Expect(118);
 		}
-		functionCall=new FunctionCallExpression(function_name,parameter_association_list);
+		functionCall=new FunctionCallExpression(function_name,toOption(parameter_association_list));
 		return functionCall;
 	}
 
 	Identifier  name_prefix() {
-		Identifier  id;
+		Identifier  identifier;
+		identifier=null;
 		if (la.kind == 5 || la.kind == 6) {
 			identifier = identifier();
-			id=identifier;
 		} else if (la.kind == 7) {
 			Get();
-			id=toIdentifier($STRING_LITERAL);
-		} else SynErr(184);
-		return id;
+			identifier=toIdentifier(t);
+		} else SynErr(185);
+		return identifier;
 	}
 
 	Name.SelectedPart  name_selected_part() {
 		Name.SelectedPart  part;
+		part=null;
 		Expect(130);
 		if (la.kind == 5 || la.kind == 6) {
-			identifier = identifier();
+			Identifier identifier = identifier();
 			part= new Name.SelectedPart(identifier);
 		} else if (la.kind == 4) {
 			Get();
-			part= new Name.SelectedPart(toIdentifier($CHARACTER_LITERAL));
+			part= new Name.SelectedPart(toIdentifier(t));
 		} else if (la.kind == 7) {
 			Get();
-			part= new Name.SelectedPart(toIdentifier($STRING_LITERAL));
+			part= new Name.SelectedPart(toIdentifier(t));
 		} else if (la.kind == 12) {
 			Get();
-			part= new Name.SelectedPart(toIdentifier($ALL));
-		} else SynErr(185);
+			part= new Name.SelectedPart(toIdentifier(t));
+		} else SynErr(186);
 		return part;
 	}
 
 	Name.Part  name_part() {
 		Name.Part  part;
+		part=null;
 		if (la.kind == 130) {
-			selectedPart = name_selected_part();
-			part = selectedPart;
+			part = name_selected_part();
 		} else if (la.kind == 3 || la.kind == 119) {
-			attributePart = name_attribute_part();
-			part = attributePart;
+			part = name_attribute_part();
 		} else if (la.kind == 117) {
-			slicePart = name_slice_part();
-			part = slicePart;
-		} else SynErr(186);
+			part = name_slice_part();
+		} else SynErr(187);
 		return part;
 	}
 
 	Name.AttributePart  name_attribute_part() {
 		Name.AttributePart  part;
 		if (la.kind == 119) {
-			signature = signature();
+			Signature signature = signature();
 		}
 		Expect(3);
 		return part;
@@ -3065,7 +3145,7 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 	Name.SlicePart  name_slice_part() {
 		Name.SlicePart  part;
 		Expect(117);
-		discreteRange = discrete_range();
+		DiscreteRange discreteRange = discrete_range();
 		Expect(118);
 		part=new Name.SlicePart(discreteRange);
 		return part;
@@ -3073,14 +3153,14 @@ private Position toIdentifier(Token token,boolean toLowerCase){
 
 	Name.IndexPart  name_indexed_part() {
 		Name.IndexPart  part;
-		ListBuffer<Expression> indexes=new ListBuffer<Expression>(); 
+		MyListBuffer<Expression> indexes=new MyListBuffer<Expression>(); 
 		Expect(117);
-		e1 = expression();
-		indexes.append(e1);
+		Expression expr = expression();
+		indexes.append(expr);
 		while (la.kind == 115) {
 			Get();
-			e2 = expression();
-			indexes.append(e2);
+			expr = expression();
+			indexes.append(expr);
 		}
 		Expect(118);
 		part=new Name.IndexPart(indexes.toList());
@@ -3293,7 +3373,7 @@ class Errors {
 			case 128: s = "EQ expected"; break;
 			case 129: s = "BAR expected"; break;
 			case 130: s = "DOT expected"; break;
-			case 131: s = "\"jldfkj\u00f6l\" expected"; break;
+			case 131: s = "\"asjd\u00f6flk\" expected"; break;
 			case 132: s = "\"\u00f6ksdf\" expected"; break;
 			case 133: s = "\"\u00f6ksdsdf\" expected"; break;
 			case 134: s = "??? expected"; break;
@@ -3304,51 +3384,52 @@ class Errors {
 			case 139: s = "invalid disconnection_specification"; break;
 			case 140: s = "invalid block_declarative_item"; break;
 			case 141: s = "invalid configuration_declarative_item"; break;
-			case 142: s = "invalid package_declarative_item"; break;
-			case 143: s = "invalid package_body_declarative_item"; break;
-			case 144: s = "invalid designator"; break;
-			case 145: s = "invalid subprogram_specification"; break;
-			case 146: s = "invalid subprogram_declarative_item"; break;
-			case 147: s = "invalid type_definition"; break;
-			case 148: s = "invalid alias_designator"; break;
-			case 149: s = "invalid entity_name_list"; break;
-			case 150: s = "invalid entity_class"; break;
-			case 151: s = "invalid entity_designator"; break;
-			case 152: s = "invalid instantiation_list"; break;
-			case 153: s = "invalid entity_aspect"; break;
-			case 154: s = "invalid group_constituent"; break;
-			case 155: s = "invalid enumeration_literal"; break;
-			case 156: s = "invalid protected_type_declarative_item"; break;
-			case 157: s = "invalid protected_type_body_declarative_item"; break;
-			case 158: s = "invalid constraint"; break;
-			case 159: s = "invalid direction"; break;
-			case 160: s = "invalid architecture_statement"; break;
-			case 161: s = "invalid architecture_statement_optional_label"; break;
-			case 162: s = "invalid architecture_statement_with_label"; break;
-			case 163: s = "invalid generate_statement"; break;
-			case 164: s = "invalid process_declarative_item"; break;
-			case 165: s = "invalid concurrent_signal_assignment_statement"; break;
-			case 166: s = "invalid target"; break;
-			case 167: s = "invalid delay_mechanism"; break;
-			case 168: s = "invalid waveform"; break;
-			case 169: s = "invalid sequential_statement"; break;
-			case 170: s = "invalid iteration_scheme"; break;
-			case 171: s = "invalid interface_element_procedure"; break;
-			case 172: s = "invalid interface_element_function"; break;
-			case 173: s = "invalid interface_mode"; break;
-			case 174: s = "invalid actual_part"; break;
-			case 175: s = "invalid logical_operator"; break;
-			case 176: s = "invalid relational_operator"; break;
-			case 177: s = "invalid shift_operator"; break;
-			case 178: s = "invalid sign"; break;
-			case 179: s = "invalid adding_operator"; break;
-			case 180: s = "invalid multiplying_operator"; break;
-			case 181: s = "invalid factor"; break;
-			case 182: s = "invalid primary"; break;
-			case 183: s = "invalid allocator"; break;
-			case 184: s = "invalid name_prefix"; break;
-			case 185: s = "invalid name_selected_part"; break;
-			case 186: s = "invalid name_part"; break;
+			case 142: s = "invalid block_specification"; break;
+			case 143: s = "invalid package_declarative_item"; break;
+			case 144: s = "invalid package_body_declarative_item"; break;
+			case 145: s = "invalid designator"; break;
+			case 146: s = "invalid subprogram_specification"; break;
+			case 147: s = "invalid subprogram_declarative_item"; break;
+			case 148: s = "invalid type_definition"; break;
+			case 149: s = "invalid alias_designator"; break;
+			case 150: s = "invalid entity_name_list"; break;
+			case 151: s = "invalid entity_class"; break;
+			case 152: s = "invalid entity_designator"; break;
+			case 153: s = "invalid instantiation_list"; break;
+			case 154: s = "invalid entity_aspect"; break;
+			case 155: s = "invalid group_constituent"; break;
+			case 156: s = "invalid enumeration_literal"; break;
+			case 157: s = "invalid protected_type_declarative_item"; break;
+			case 158: s = "invalid protected_type_body_declarative_item"; break;
+			case 159: s = "invalid constraint"; break;
+			case 160: s = "invalid direction"; break;
+			case 161: s = "invalid architecture_statement"; break;
+			case 162: s = "invalid architecture_statement_optional_label"; break;
+			case 163: s = "invalid architecture_statement_with_label"; break;
+			case 164: s = "invalid generate_statement"; break;
+			case 165: s = "invalid process_declarative_item"; break;
+			case 166: s = "invalid concurrent_signal_assignment_statement"; break;
+			case 167: s = "invalid target"; break;
+			case 168: s = "invalid delay_mechanism"; break;
+			case 169: s = "invalid waveform"; break;
+			case 170: s = "invalid sequential_statement"; break;
+			case 171: s = "invalid iteration_scheme"; break;
+			case 172: s = "invalid interface_element_procedure"; break;
+			case 173: s = "invalid interface_element_function"; break;
+			case 174: s = "invalid interface_mode"; break;
+			case 175: s = "invalid actual_part"; break;
+			case 176: s = "invalid logical_operator"; break;
+			case 177: s = "invalid relational_operator"; break;
+			case 178: s = "invalid shift_operator"; break;
+			case 179: s = "invalid sign"; break;
+			case 180: s = "invalid adding_operator"; break;
+			case 181: s = "invalid multiplying_operator"; break;
+			case 182: s = "invalid factor"; break;
+			case 183: s = "invalid primary"; break;
+			case 184: s = "invalid allocator"; break;
+			case 185: s = "invalid name_prefix"; break;
+			case 186: s = "invalid name_selected_part"; break;
+			case 187: s = "invalid name_part"; break;
 			default: s = "error " + n; break;
 		}
 		printMsg(line, col, s);

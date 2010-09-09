@@ -37,7 +37,7 @@ final case class Term(position: Position, left: Expression, operator: Term.Opera
 final case class AggregateExpression(aggregate: Aggregate) extends Expression {
   val position = aggregate.elements.head.choices match {
     case None => aggregate.elements.head.expression.position
-    case Some(choices) => choices.elements.head.position
+    //case Some(choices) => choices.elements.head.position
   }
 }
 
