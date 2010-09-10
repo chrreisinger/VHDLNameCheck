@@ -93,10 +93,12 @@ final class DiscreteRange(val rangeOrSubTypeIndication: Either[Range, SubTypeInd
 }
 
 final class SubTypeIndication(val resolutionFunction: Option[SelectedName], val typeName: SelectedName, val constraint: Option[Either[Range, Seq[DiscreteRange]]]) extends Locatable {
+  def this(typeName: SelectedName, constraint: Option[Either[Range, Seq[DiscreteRange]]]) = this (None, typeName, constraint)
+
   val position = resolutionFunction.getOrElse(typeName).position
 }
 
-final class Signature(val parameterList: Seq[SelectedName], val returnType: Option[SelectedName])
+final class Signature(val parameterList: Option[Seq[SelectedName]], val returnType: Option[SelectedName])
 
 object Aggregate {
   final case class ElementAssociation(choices: Option[Choices], expression: Expression)
@@ -280,13 +282,11 @@ final case class IfGenerateStatement(position: Position, label: Option[Identifie
 final case class ForGenerateStatement(position: Position, label: Option[Identifier], loopIdentifier: Identifier, discreteRange: DiscreteRange, declarativeItems: Seq[DeclarativeItem],
                                       statementList: Seq[ConcurrentStatement]) extends ConcurrentStatement
 
-object ComponentInstantiationStatement {
-  type ComponentType = ComponentType.Value
-  object ComponentType extends Enumeration {
-    val COMPONENT, ENTITY, CONFIGURATION = Value
-  }
+object ComponentType extends Enumeration {
+  val COMPONENT, ENTITY, CONFIGURATION = Value
 }
-final case class ComponentInstantiationStatement(position: Position, label: Option[Identifier], componentType: ComponentInstantiationStatement.ComponentType, name: SelectedName, architectureIdentifier: Option[Identifier],
+
+final case class ComponentInstantiationStatement(position: Position, label: Identifier, componentType: ComponentType.Value, name: SelectedName, architectureIdentifier: Option[Identifier],
                                                  genericAssociationList: Option[AssociationList], portAssociationList: Option[AssociationList]) extends ConcurrentStatement
 
 final case class ProcessStatement(position: Position, label: Option[Identifier], postponed: Boolean, sensitivityList: Option[Seq[Name]], declarativeItems: Seq[DeclarativeItem],

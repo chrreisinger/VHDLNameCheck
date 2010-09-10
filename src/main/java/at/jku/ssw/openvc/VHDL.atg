@@ -125,11 +125,13 @@ CHARACTERS
   lf            = '\u000a'. /* 10 = line feed */
   cr            = '\u000d'. /* 13 = carriage return */
   DIGIT = '0'..'9'.
-  	LOWER_CASE_LETTER = 'a'..'z' .//| '\u00df'..'\u00f6' | '\u00f8'.. '\u00ff'. //a-z,ß - ö, ø - ÿ
-	UPPER_CASE_LETTER = 'A'..'Z' .//| '\u00c0'..'\u00d6' | '\u00d8' .. '\u00de'. //A - Z,À - Ö, Ø - Þ
-	SPECIAL_CHARACTER = "#&\'()*+,-./:;<=>[]_|".
+  LOWER_CASE_LETTER = 'a'..'z' .//| '\u00df'..'\u00f6' | '\u00f8'.. '\u00ff'. //a-z,ß - ö, ø - ÿ
+  UPPER_CASE_LETTER = 'A'..'Z' .//| '\u00c0'..'\u00d6' | '\u00d8' .. '\u00de'. //A - Z,À - Ö, Ø - Þ
+  SPECIAL_CHARACTER = "#&\'()*+,-./:;<=>[]_|".
+  
+  //LETTER = UPPER_CASE_LETTER| LOWER_CASE_LETTER.
+  //LETTER_OR_DIGIT = LETTER| DIGIT.
 TOKENS
-	
 	
 	//BASIC_IDENTIFIER = LETTER { LETTER_OR_DIGIT | '_' }.
 
@@ -137,9 +139,13 @@ TOKENS
 	   		 	
 	//BASED_LITERAL = INTEGER '#' BASED_INTEGER [DOT BASED_INTEGER] '#' EXPONENT? .
 	
-	//INTEGER_LITERAL = INTEGER [EXPONENT].
+	//INTEGER = DIGIT { ['_'] DIGIT}.
+	
+	//EXPONENT = 'e' [ '+' | '-' ] DIGIT { ['_'] DIGIT}.
+	
+	INTEGER_LITERAL = DIGIT { ['_'] DIGIT} ['e' [ '+' | '-' ] DIGIT { ['_'] DIGIT}].
 	    
-	//REAL_LITERAL = INTEGER  DOT INTEGER  [EXPONENT] .
+	REAL_LITERAL = DIGIT { ['_'] DIGIT}  '.' DIGIT { ['_'] DIGIT}  ['e' [ '+' | '-' ] DIGIT { ['_'] DIGIT}] .
 	
 	/*  
 	SPACE_CHARACTER = ' ' | '\u00a0'. //space, non-breaking space
@@ -155,22 +161,16 @@ TOKENS
 	
 	//EXTENDED_DIGIT = DIGIT | LETTER.
 	
-	//BASED_INTEGER = EXTENDED_DIGIT {['_'] EXTENDED_DIGIT}.
-
-	INTEGER = DIGIT { ['_'] DIGIT}.
-
-	//EXPONENT = 'e' [ '+' | '-' ] INTEGER.
-
-	//LETTER_OR_DIGIT = LETTER| DIGIT.
-
-	LETTER = UPPER_CASE_LETTER| LOWER_CASE_LETTER.
+	//BASED_INTEGER = EXTENDED_DIGIT {['_'] EXTENDED_DIGIT}.	
 
 //TODO 
 APOSTROPHE ="blub".
 CHARACTER_LITERAL ="blubx".
-EXTENDED_IDENTIFIER ="blubx2".
-BASIC_IDENTIFIER ="blubx3".
 STRING_LITERAL ="blubx24".
+BASED_LITERAL="jlskdf".
+BASIC_IDENTIFIER="jlkfd".
+EXTENDED_IDENTIFIER="jölkdjfölks".
+BIT_STRING_LITERAL="jöslkdjf2".
 
   	ABS="abs".
 	ACCESS="access".
@@ -307,7 +307,8 @@ PRODUCTIONS
 
 VHDL<out DesignFile designFile> =	
 		(.MyListBuffer<DesignUnit> units=new MyListBuffer<DesignUnit>(); .)
-		{design_unit<out DesignUnit designUnit> (. units.append(designUnit); .) } //TODO change to *
+		design_unit<out DesignUnit designUnit> (. units.append(designUnit); .)
+		{design_unit<out designUnit> (. units.append(designUnit); .) }
 		(.designFile=new DesignFile(units.toList());.)
 		.
 
@@ -317,7 +318,7 @@ design_unit<out DesignUnit designUnit> =
 	MyListBuffer<UseClause> useClauses=new MyListBuffer<UseClause>();
 .)
 		{
-		library_clause<out Seq<.Identifier.> identifierList> (.libraries.appendAll(identifierList);.)
+		library_clause<.out Seq<Identifier> identifierList.> (.libraries.appendAll(identifierList);.)
 		|use_clause<out UseClause useClause> (.useClauses.append(useClause);.)
 		} (.Position pos=toPosition(la);.) library_unit<out LibraryUnit libraryUnit>
 		(.designUnit=new DesignUnit(pos,libraries.toList(),useClauses.toList(),toOption(libraryUnit));.)
@@ -408,7 +409,7 @@ architecture_body<out ArchitectureDeclaration archDecl> =
 		ARCHITECTURE identifier<out Identifier start_identifier> OF selected_name<out SelectedName entityName> IS
 			{block_declarative_item<out DeclarativeItem item>(.declarativeItems.append(item); .)}
 		BEGIN
-			architecture_statement_list<out Seq<.ConcurrentStatement.> statementList>
+			architecture_statement_list<.out Seq<ConcurrentStatement> statementList.>
 		END_TOKEN [ARCHITECTURE] [unused_identifier] SEMICOLON
 		(.archDecl=new ArchitectureDeclaration(start_identifier,declarativeItems.toList(),entityName,statementList); .)
 		.
@@ -559,7 +560,7 @@ subprogram_body<out SubProgramDefinition subProgramDef,SubProgramDeclaration sub
 		IS
 			{subprogram_declarative_item<out DeclarativeItem item>(. declarativeItems.append(item); .)} 
 		BEGIN
-			sequential_statement_list<out Seq<.SequentialStatement.> sequentialStatements>
+			sequential_statement_list<.out Seq<SequentialStatement> sequentialStatements.>
 		END_TOKEN [PROCEDURE | FUNCTION] [designator<out Identifier unused>]
 		(.			
 			if (subprogramDecl instanceof ProcedureDeclaration){
@@ -616,31 +617,30 @@ type_definition<out AbstractTypeDeclaration typeDef,Identifier id,Position pos> 
 	
 constant_declaration <out ConstantDeclaration constantDecl> =
 		(.Position pos=toPosition(la);Expression expr=null;.)
-		CONSTANT identifier_list<out Seq<.Identifier.> list> COLON subtype_indication<out SubTypeIndication subType> [VAR_ASSIGN expression<out expr>] SEMICOLON 
+		CONSTANT identifier_list<.out Seq<Identifier> list.> COLON subtype_indication<out SubTypeIndication subType> [VAR_ASSIGN expression<out expr>] SEMICOLON 
 		(.constantDecl=new ConstantDeclaration(pos,list,subType,toOption(expr));.)
 		.
 	
 signal_declaration<out SignalDeclaration signalDecl> =
 		(.Position pos=toPosition(la);Expression expr=null;boolean reg=false,bus=false;.)
-		SIGNAL identifier_list<out Seq<.Identifier.> list> COLON subtype_indication<out SubTypeIndication subType> [REGISTER(.reg=true;.)|BUS(.bus=true;.)] [VAR_ASSIGN expression<out expr>] SEMICOLON
+		SIGNAL identifier_list<.out Seq<Identifier> list.> COLON subtype_indication<out SubTypeIndication subType> [REGISTER(.reg=true;.)|BUS(.bus=true;.)] [VAR_ASSIGN expression<out expr>] SEMICOLON
 		(.
-			Option<scala.Enumeration.Value> signalType=null;
-				if(reg) signalType=new Some(SignalType.REGISTER());
-				else if (bus) signalType=new Some(SignalType.BUS());
-				else signalType=scala.None$.MODULE$;
-			signalDecl=new SignalDeclaration(pos,list,subType,signalType,toOption(expr));
+			scala.Enumeration.Value signalType=null;
+				if(reg) signalType=SignalType.REGISTER();
+				else if (bus) signalType=SignalType.BUS();
+			signalDecl=new SignalDeclaration(pos,list,subType,toOption(signalType),toOption(expr));
 		.)
 		.
 		
 variable_declaration<out VariableDeclaration varDecl> =
 		(.Position pos=toPosition(la);Expression expr=null;boolean shared=false;.)
-		[SHARED(.shared=true;.)] VARIABLE identifier_list<out Seq<.Identifier.> list> COLON subtype_indication<out SubTypeIndication subType> [VAR_ASSIGN expression<out expr>] SEMICOLON
+		[SHARED(.shared=true;.)] VARIABLE identifier_list<.out Seq<Identifier> list.> COLON subtype_indication<out SubTypeIndication subType> [VAR_ASSIGN expression<out expr>] SEMICOLON
 		(.varDecl=new VariableDeclaration(pos,shared,list,subType,toOption(expr));.)
 		.
 	
 file_declaration<out FileDeclaration fileDecl> =
 		(.Position pos=toPosition(la);Expression file_open_kind_expression=null,file_logical_name=null;.)
-		FILE identifier_list<out Seq<.Identifier.> list> COLON subtype_indication<out SubTypeIndication subType> [[OPEN expression<out file_open_kind_expression>] IS expression<out file_logical_name>] SEMICOLON
+		FILE identifier_list<.out Seq<Identifier> list.> COLON subtype_indication<out SubTypeIndication subType> [[OPEN expression<out file_open_kind_expression>] IS expression<out file_logical_name>] SEMICOLON
 		(.fileDecl=new FileDeclaration(pos,list,subType,toOption(file_open_kind_expression),toOption(file_logical_name));.)
 		.
 	
@@ -684,7 +684,7 @@ entity_designator<out Tuple2<Identifier,Option<Signature>> designator> =
 		|CHARACTER_LITERAL(.identifier=toIdentifier(t);.)
 		|STRING_LITERAL(.identifier=toIdentifier(t);.)
 		) [signature<out signature>]
-		(.designator=new Tuple2<Identifier,Option<Signature>>(identifier,new Option<Signature>(signature)); .)
+		(.designator=new Tuple2<Identifier,Option<Signature>>(identifier,toOption(signature)); .)
 		.
 	
 entity_name_list<out Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier> list> =
@@ -733,7 +733,7 @@ configuration_specification<out ConfigurationSpecification configSpec> =
 instantiation_list<out Either<Seq<Identifier>,Identifier> list> =
 	  (.list=null;.)
 	  (
-	  identifier_list<out Seq<.Identifier.> identifierList> (.list=new Left(list);.)
+	  identifier_list<.out Seq<Identifier> identifierList.> (.list=new Left(list);.)
 		| OTHERS (.list=new Right(toIdentifier(t));.)
 		| ALL (.list=new Right(toIdentifier(t));.)
 	  )
@@ -802,7 +802,7 @@ group_constituent_list<out Seq<Either<Name,Identifier>> list> =
     
 use_clause<out UseClause useClause> =
 		(.Position pos=toPosition(la);.)
-		USE selected_name_list<out Seq<.SelectedName.> list> SEMICOLON
+		USE selected_name_list<.out Seq<SelectedName> list.> SEMICOLON
 		(.useClause=new UseClause(pos,list);.)
 		.
 
@@ -834,7 +834,7 @@ physical_type_definition<out PhysicalTypeDefinition physicalTypeDef, Identifier 
 		UNITS
 			identifier<out Identifier baseIdentifier> SEMICOLON
 			{
-			identifier<out Identifier identifier> EQ physical_literal<out literal> SEMICOLON 
+			identifier<out Identifier identifier> EQ physical_literal<out PhysicalLiteral literal> SEMICOLON 
 			(.elements.append(new PhysicalTypeDefinition.Element(identifier,literal));.)
 			}
 		END_TOKEN UNITS [unused_identifier]
@@ -863,11 +863,13 @@ array_type_definition<out AbstractArrayTypeDefinition arrayTypeDef,Identifier id
 		
 record_type_definition<out RecordTypeDefinition recordTypeDef,Identifier id,Position pos> =
 		(. MyListBuffer<RecordTypeDefinition.Element> elements=new MyListBuffer<RecordTypeDefinition.Element>(); .)
-		RECORD 
+		RECORD
+			identifier_list<.out Seq<Identifier> list.> COLON subtype_indication<out SubTypeIndication subType> SEMICOLON
+			(.elements.append(new RecordTypeDefinition.Element(list, subType));.) 
 			{
-			identifier_list<out Seq<.Identifier.> list> COLON subtype_indication<out SubTypeIndication subType> SEMICOLON
+			identifier_list<.out list.> COLON subtype_indication<out subType> SEMICOLON
 			(.elements.append(new RecordTypeDefinition.Element(list, subType));.)
-			} //TODO + not *
+			}
 		END_TOKEN RECORD [unused_identifier]
 		(.recordTypeDef=new RecordTypeDefinition(pos,id,elements.toList());.)
 		.
@@ -935,8 +937,8 @@ subtype_indication<out SubTypeIndication subType> =
 		(.Object constraint=null;SelectedName n2=null;.)
 		selected_name<out SelectedName n1> [selected_name<out n2>] [constraint<out constraint>]
 		(.
-			if (n2!=null) subType=new SubTypeIndication(new Some(n1),n2,toOption(constraint));
-			else subType=new SubTypeIndication(scala.None$.MODULE$,n1,toOption(constraint));
+			if (n2!=null) subType=new SubTypeIndication(n1,n2,toOption(constraint));
+			else subType=new SubTypeIndication(n1,toOption(constraint));
 		.)
 		.
   
@@ -973,7 +975,7 @@ constraint<out Either<Range,Seq<DiscreteRange>> constraint> =
 		(.constraint=null;.)
 		(
 		range_constraint<out Range rangeContraint> (.constraint = new Left(rangeContraint);.)
-		| index_constraint<out Seq<.DiscreteRange.> ranges> (.constraint = new Right(ranges);.)
+		| index_constraint<.out Seq<DiscreteRange> ranges.> (.constraint = new Right(ranges);.)
 		)
 		.
 
@@ -1049,7 +1051,7 @@ block_statement<out BlockStatement blockStmt, Identifier label> =
 			[port_clause<out portClause> [port_map_aspect<out portMap> SEMICOLON]]
 			{block_declarative_item<out DeclarativeItem item>(. declarativeItems.append(item);.)}
 		BEGIN
-			architecture_statement_list<out Seq<.ConcurrentStatement.> statementList>
+			architecture_statement_list<.out Seq<ConcurrentStatement> statementList.>
 		END_TOKEN BLOCK [unused_identifier] SEMICOLON 
 		(. blockStmt=new BlockStatement(pos,toOption(label),toOption(guard_expression),toOption(genericClause),toOption(genericMap),toOption(portClause),toOption(portMap),declarativeItems.toList(),statementList);.)
 		.
@@ -1085,7 +1087,7 @@ process_statement<out ProcessStatement processStmt,Identifier label,boolean post
 		PROCESS [LPAREN name_list<out name_list> RPAREN] [IS]
 			{process_declarative_item<out DeclarativeItem item> (.declarativeItems.append(item);.)}
 		BEGIN
-			sequential_statement_list<out Seq<.SequentialStatement.> sequentialStatements>
+			sequential_statement_list<.out Seq<SequentialStatement> sequentialStatements.>
 		END_TOKEN [POSTPONED] PROCESS [unused_identifier] SEMICOLON
 		(.processStmt=new ProcessStatement(pos,toOption(label),postponed,toOption(name_list),declarativeItems.toList(),sequentialStatements);.)
 		.
@@ -1121,8 +1123,11 @@ concurrent_assertion_statement<out ConcurrentAssertionStatement assertStmt, Iden
 		.
 							
 concurrent_signal_assignment_statement<out ConcurrentSignalAssignmentStatement signalAssignmentStatement, Identifier label,boolean postponed> =
+		(.signalAssignmentStatement=null;.)
+		(
 		 conditional_signal_assignment<out signalAssignmentStatement,label,postponed>
 		|selected_signal_assignment<out signalAssignmentStatement,label,postponed>
+		)
 		.
 
 conditional_signal_assignment<out ConcurrentConditionalSignalAssignment signalAssignment, Identifier label,boolean postponed> =
@@ -1137,8 +1142,7 @@ conditional_signal_assignment<out ConcurrentConditionalSignalAssignment signalAs
 		(.signalAssignment=new ConcurrentConditionalSignalAssignment(pos,toOption(label),postponed,target,guarded,toOption(delay),elements.toList());.)
 		.
 
-//TODO 
-conditional_waveforms<MyListBuffer elements> =
+conditional_waveforms<.MyListBuffer<ConcurrentConditionalSignalAssignment.When> elements.> =
 		(.Expression expr=null;.)
        waveform<out Waveform waveform> [ WHEN condition<out expr> [ ELSE conditional_waveforms<elements> ] ] (.elements.prepend(new ConcurrentConditionalSignalAssignment.When(waveform,expr));.)
        .
@@ -1171,17 +1175,20 @@ target<out Target target> =
   		
 component_instantiation_statement<out ComponentInstantiationStatement stmt, Identifier label> =
 (.
-	ComponentInstantiationStatement.ComponentType.Value componentType =null;
+	scala.Enumeration.Value componentType =null;
 	AssociationList genericMap=null,portMap=null;
-	Token firstToken=la;
+	Position pos=toPosition(la);
+	SelectedName name=null;
+	Identifier architecture=null;
 .)
-		/*( COMPONENT? n=selected_name {componentType=ComponentInstantiationStatement.ComponentType.COMPONENT }
-		  | ENTITY n=selected_name (LPAREN architecture_identifier=identifier RPAREN)? {componentType=ComponentInstantiationStatement.ComponentType.ENTITY}
-		  | CONFIGURATION n=selected_name {componentType=ComponentInstantiationStatement.ComponentType.CONFIGURATION})
-		TODO*/
+		( //TODO change to COMPONENT?
+		  COMPONENT selected_name<out name> (.componentType=ComponentType.COMPONENT();.)
+		  | ENTITY selected_name<out name> [LPAREN identifier<out architecture> RPAREN] (.componentType=ComponentType.ENTITY();.)
+		  | CONFIGURATION selected_name<out name> (.componentType=ComponentType.CONFIGURATION();.)
+		)
 		[generic_map_aspect<out genericMap>]
 		[port_map_aspect<out portMap>] SEMICOLON
-		(.stmt=new ComponentInstantiationStatement(toPosition(firstToken),label,componentType,$n.name_,$architecture_identifier.id,genericMap,portMap);.)
+		(.stmt=new ComponentInstantiationStatement(pos,label,componentType,name,toOption(architecture),toOption(genericMap),toOption(portMap));.)
 		.
 		
 generate_statement<out ConcurrentStatement generateStmt, Identifier label> =
@@ -1214,7 +1221,7 @@ generate_statement_body<out Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>
 .)
 		[{block_declarative_item<out DeclarativeItem item>(.declarativeItems.append(item);.)} 
 	    BEGIN]
-	   	architecture_statement_list<out Seq<.ConcurrentStatement.> concurrentStatements>
+	   	architecture_statement_list<.out Seq<ConcurrentStatement> concurrentStatements.>
 	   	(.
 	   		statementList=new Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>(declarativeItems,concurrentStatements);
 	   	.)
@@ -1292,7 +1299,7 @@ delay_mechanism<out DelayMechanism mechanism> =
 		| [REJECT expression<out time_expression>] INERTIAL
 		)
 		(.
-			if (time_expression==null) mechanism=new DelayMechanism(DelayMechanism.TRANSPORT(),scala.None$.MODULE$);
+			if (time_expression==null) mechanism=new DelayMechanism(DelayMechanism.TRANSPORT(),toOption(time_expression));
 			else mechanism=new DelayMechanism(DelayMechanism.INERTIAL(),toOption(time_expression));
 		.)
 		.
@@ -1343,7 +1350,8 @@ case_statement<out CaseStatement caseStmt,Identifier label> =
 		   MyListBuffer<CaseStatement.When> alternatives=new MyListBuffer<CaseStatement.When>(); 
 		.)
 		CASE expression<out Expression expr> IS
-			{WHEN choices<out Choices choices> ARROW sequential_statement_list<out Seq<.SequentialStatement.> sequentialStatements> (.alternatives.append(new CaseStatement.When(choices,sequentialStatements));.)} //TODO + statt *
+			WHEN choices<out Choices choices> ARROW sequential_statement_list<.out Seq<SequentialStatement> sequentialStatements.> (.alternatives.append(new CaseStatement.When(choices,sequentialStatements));.)
+			{WHEN choices<out choices> ARROW sequential_statement_list<.out sequentialStatements.> (.alternatives.append(new CaseStatement.When(choices,sequentialStatements));.)}
 		END_TOKEN CASE  [unused_identifier] SEMICOLON
 		(.caseStmt=new CaseStatement(pos,toOption(label),expr,alternatives.toList());.)
 		.
@@ -1359,12 +1367,15 @@ iteration_scheme<out Either<Expression,Tuple2<Identifier,DiscreteRange>> scheme>
 loop_statement<out SequentialStatement loopStmt, Identifier label> =
 		(.Position pos=toPosition(la);Object stmtType=null;.)
 		[iteration_scheme<out stmtType>] LOOP
-			sequential_statement_list<out Seq<.SequentialStatement.> sequentialStatements>
+			sequential_statement_list<.out Seq<SequentialStatement> sequentialStatements.>
 		END_TOKEN LOOP [unused_identifier] SEMICOLON
 		(.		
 			if (stmtType!=null){
-				if (stmtType instanceof Left) loopStmt=new WhileStatement(pos,toOption(label),((Left<Expression>)stmtType).a,sequentialStatements);
-				//TODO case Right((identifier,discreteRange)) =>new ForStatement(pos,label,identifier,discreteRange,sequentialStatements);
+				if (stmtType instanceof Left) loopStmt=new WhileStatement(pos,toOption(label),((Left<Expression,Tuple2<Identifier,DiscreteRange>>)stmtType).a,sequentialStatements);
+				else {
+					Tuple2<Identifier,DiscreteRange> r=((Right<Expression,Tuple2<Identifier,DiscreteRange>>)stmtType).b;
+					loopStmt=new ForStatement(pos,toOption(label),r._1,r._2,sequentialStatements);
+				}
 			}else loopStmt=new LoopStatement(pos,toOption(label),sequentialStatements);
 		.)
 		.
@@ -1406,8 +1417,8 @@ interface_element_procedure<out InterfaceList.AbstractInterfaceElement element> 
 interface_element_function<out InterfaceList.AbstractInterfaceElement element> =
 		(.element=null;.)
 		(
-	//TODO:	(CONSTANT? identifier_list)=> interface_constant_declaration  {$element=$interface_constant_declaration.constElement}
-		 interface_signal_declaration_function<out element>
+		 interface_constant_declaration<out element>
+		| interface_signal_declaration_function<out element>
 		| interface_file_declaration<out element>
 		)
 		.
@@ -1432,25 +1443,25 @@ parameter_interface_list_function<out InterfaceList list> =
 			
 interface_constant_declaration<out InterfaceList.InterfaceConstantDeclaration constElement> =
 		(.Expression expr=null;.)
-		[CONSTANT] identifier_list<out Seq<.Identifier.> list> COLON [IN] subtype_indication<out SubTypeIndication subType> [VAR_ASSIGN expression<out expr>] 
+		[CONSTANT] identifier_list<.out Seq<Identifier> list.> COLON [IN] subtype_indication<out SubTypeIndication subType> [VAR_ASSIGN expression<out expr>] 
 		(.constElement=new InterfaceList.InterfaceConstantDeclaration(list,subType,toOption(expr));.)
 		.
 
 interface_signal_declaration_procedure<out InterfaceList.InterfaceSignalDeclaration signalElement> =
 		(.Expression expr=null;boolean bus=false;scala.Enumeration.Value mode=null;.)
-		[SIGNAL] identifier_list<out Seq<.Identifier.> list> COLON [interface_mode<out mode>] subtype_indication<out SubTypeIndication subType> [BUS(.bus=true;.)] [VAR_ASSIGN expression<out expr>]
+		[SIGNAL] identifier_list<.out Seq<Identifier> list.> COLON [interface_mode<out mode>] subtype_indication<out SubTypeIndication subType> [BUS(.bus=true;.)] [VAR_ASSIGN expression<out expr>]
 		(.signalElement=new InterfaceList.InterfaceSignalDeclaration(list,toOption(mode),subType,bus,toOption(expr));.)
 		.
 		
 interface_signal_declaration_function<out InterfaceList.InterfaceSignalDeclaration signalElement> =
 		(.Expression expr=null;boolean bus=false;.)
-		[SIGNAL] identifier_list<out Seq<.Identifier.> list> COLON [IN] subtype_indication<out SubTypeIndication subType> [BUS(.bus=true;.)] [VAR_ASSIGN expression<out expr>]
+		SIGNAL identifier_list<.out Seq<Identifier> list.> COLON [IN] subtype_indication<out SubTypeIndication subType> [BUS(.bus=true;.)] [VAR_ASSIGN expression<out expr>]
 		(.signalElement=new InterfaceList.InterfaceSignalDeclaration(list,toOption(InterfaceMode.IN()),subType,bus,toOption(expr));.)
 		.
 	
 interface_variable_declaration<out InterfaceList.InterfaceVariableDeclaration varElement> =
 		(.Expression expr=null;scala.Enumeration.Value mode=null;.)
-		[VARIABLE] identifier_list<out Seq<.Identifier.> list> COLON [interface_mode<out mode>] subtype_indication<out SubTypeIndication subType> [VAR_ASSIGN expression<out expr>]
+		[VARIABLE] identifier_list<.out Seq<Identifier> list.> COLON [interface_mode<out mode>] subtype_indication<out SubTypeIndication subType> [VAR_ASSIGN expression<out expr>]
 		(.varElement=new InterfaceList.InterfaceVariableDeclaration(list,toOption(mode),subType,toOption(expr));.)
 		.
 	
@@ -1466,7 +1477,7 @@ interface_mode<out scala.Enumeration.Value mode> =
 		.
 
 interface_file_declaration<out InterfaceList.InterfaceFileDeclaration fileElement> =
-		FILE identifier_list<out Seq<.Identifier.> list> COLON subtype_indication<out SubTypeIndication subType>
+		FILE identifier_list<.out Seq<Identifier> list.> COLON subtype_indication<out SubTypeIndication subType>
 		(.fileElement=new InterfaceList.InterfaceFileDeclaration(list,subType);.)
 		.
 
@@ -1489,8 +1500,12 @@ formal_part<out Name formal_part> =
 		.
 		
 actual_part<out Option<Expression> actual_part> = 
-		expression<out Expression expr> (.actual_part = toOption(expr);.)
-		| OPEN (.actual_part=scala.None$.MODULE$;.)
+		(.Expression expr=null;.)
+		(
+		expression<out expr> 
+		| OPEN
+		)
+		(.actual_part = toOption(expr);.)
 		.
 			
 condition<out Expression expr> =
@@ -1500,8 +1515,8 @@ condition<out Expression expr> =
 expression<out Expression expr> =
 		(.Tuple2<Position,scala.Enumeration.Value> op=null;.)
 	   relation<out expr> (
-	   //TODO (nand=NAND|nor=NOR) r2=relation {$expr=new LogicalExpression(toPosition(if($nand ne null) $nand else $nor),$r1.rel,if ($nand ne null) LogicalExpression.Operator.NAND else LogicalExpression.Operator.NOR,$r2.rel)}
-	   {logical_operator<out op> relation<out Expression right> (.expr=new LogicalExpression(op._1,expr,op._2,right);.)}
+	   //TODO(NAND|NOR) (int kind=t.kind;Position pos=toPosition(t);.) relation<out Expression right> (.expr=new LogicalExpression(pos,expr,if (kind==_NAND) LogicalOperator.NAND() else LogicalOperator.NOR(),right);.)
+	    {logical_operator<out op> relation<out Expression right> (.expr=new LogicalExpression(op._1,expr,op._2,right);.)}
 	   )
 	   .
 
@@ -1568,8 +1583,8 @@ shift_operator<out Tuple2 op> =
 simple_expression<out Expression simpleExpr> =
 	  (.Tuple2<Position,scala.Enumeration.Value> op=null,sign=null;.)
 	  [sign<out sign>] term<out simpleExpr> 
-	  (.if (sign!=null) simpleExpr=new SimpleExpression(sign._1,sign._2,simpleExpr,scala.None$.MODULE$,scala.None$.MODULE$);.)
-	  {adding_operator<out op> term<out Expression right> (.simpleExpr=new SimpleExpression(op._1,scala.None$.MODULE$,simpleExpr,op._2,right);.)}
+	  (.if (sign!=null) simpleExpr=new SimpleExpression(sign._1,sign._2,simpleExpr);.)
+	  {adding_operator<out op> term<out Expression right> (.simpleExpr=new SimpleExpression(op._1,simpleExpr,op._2,right);.)}
 	  .
 
 sign<out Tuple2<Position,scala.Enumeration.Value> op> =
@@ -1618,9 +1633,12 @@ term<out Expression term> =
 	  .
  
 factor<out Expression factor> =
-	primary<out factor> [DOUBLESTAR (.Position pos=toPosition(t);.) primary<out Expression right> (.factor = new Factor(pos,factor,FactorOperator.POW(),right);.)]
+	(.factor=null;.)
+	(
+	primary<out factor> [DOUBLESTAR (.Position pos=toPosition(t);.) primary<out Expression right> (.factor = new Factor(pos,factor,FactorOperator.POW(),toOption(right));.)]
 	| ABS (.Position pos=toPosition(t);.) primary<out Expression left> (.factor = new Factor(pos,left,FactorOperator.ABS());.)
 	| NOT (.Position pos=toPosition(t);.) primary<out Expression left> (.factor = new Factor(pos,left,FactorOperator.NOT());.)
+	)
 	.
 
 primary<out Expression expr> =
@@ -1630,9 +1648,8 @@ primary<out Expression expr> =
 	 (selected_name qualified_expression[null]) =>selected_name qualified_expression[$selected_name.name_] {$obj=$qualified_expression.expr}
 	 | (name)=>name {$obj=new NameExpression($name.name_)}
   	 | (selected_name LPAREN association_list RPAREN)=>function_call {$obj=$function_call.functionCall}
-	 | literal {$obj=$literal.literal_} 
-	 | (LPAREN expression RPAREN)=> LPAREN expression RPAREN {$obj=$expression.expr}
 	 */
+	 | literal<out expr> 
 	 | allocator<out expr>
 	 | aggregate<out Aggregate aggregate> (.expr=new AggregateExpression(aggregate);.)
 	 )
@@ -1642,7 +1659,7 @@ allocator<out Expression newExpression> =
 	(.Position pos=toPosition(la);.)
 	NEW selected_name<out SelectedName selectedName>  
 	 	( qualified_expression<out Expression expr,selectedName> (.newExpression=new NewExpression(pos,new Left(expr));.)
-	 	| [index_constraint<out Seq<.DiscreteRange.> ranges> (.newExpression=new NewExpression(pos,new Right(new SubTypeIndication(scala.None$.MODULE$,selectedName,new Right(ranges))));.)]
+	 	| [index_constraint<.out Seq<DiscreteRange> ranges.> (.newExpression=new NewExpression(pos,new Right(new SubTypeIndication(selectedName,toOption(new Right(ranges)))));.)]
 	 	)
 	 	.
 
@@ -1733,40 +1750,35 @@ signature<out Signature signature> =
 		LBRACKET [selected_name_list<out list>] [RETURN type_mark<out returnType>] RBRACKET
 		(.signature =new Signature(toOption(list),toOption(returnType));.)
 		.
-/*	TODO
-literal returns [Expression literal_]
-@init{
-	var literalType:Literal.Type.Value=null
-	val firstToken=la
-}
-	:	
+		
+literal<out Expression literal> =
+		(. scala.Enumeration.Value literalType=null;.)
 		(
-		REAL_LITERAL {literalType=Literal.Type.REAL_LITERAL}
-		| INTEGER_LITERAL {literalType=Literal.Type.INTEGER_LITERAL}
-		| BASED_LITERAL {literalType=Literal.Type.BASED_LITERAL}
-		| CHARACTER_LITERAL {literalType=Literal.Type.CHARACTER_LITERAL}
-		| STRING_LITERAL {literalType=Literal.Type.STRING_LITERAL}
-		| BIT_STRING_LITERAL {literalType=Literal.Type.BIT_STRING_LITERAL}
-		| NULL {literalType=Literal.Type.NULL_LITERAL}
+		REAL_LITERAL (.literalType=LiteralType.REAL_LITERAL();.)
+		| INTEGER_LITERAL (.literalType=LiteralType.INTEGER_LITERAL();.)
+		| BASED_LITERAL (.literalType=LiteralType.BASED_LITERAL();.)
+		| CHARACTER_LITERAL (.literalType=LiteralType.CHARACTER_LITERAL();.)
+		| BIT_STRING_LITERAL (.literalType=LiteralType.BIT_STRING_LITERAL();.)
+		| NULL (.literalType=LiteralType.NULL_LITERAL();.)
 		)
-		{$literal_ =new Literal(toPosition(firstToken),input.LT(-1).getText(),literalType)}
-		({input.LA(-1)==INTEGER_LITERAL || input.LA(-1)==REAL_LITERAL /*|| input.LA(-1)==BASED_LITERAL*/}?=> identifier {$literal_ = new PhysicalLiteral($literal_.asInstanceOf[Literal],$identifier.id)})?
-		;
+		(.literal =new Literal(toPosition(t),t.val,literalType);.)
+		[IF(t.kind==_INTEGER_LITERAL || t.kind==_REAL_LITERAL) identifier<out Identifier unit> (.literal = new PhysicalLiteral((Literal)literal,unit);.)]
+		.
 	
-physical_literal returns [PhysicalLiteral literal_]
-@init{
-	var text:String=null
-	var literalType:Literal.Type.Value=null
-	val firstToken=la
-}
-	:	(INTEGER_LITERAL {text=input.LT(-1).getText(); literalType=Literal.Type.INTEGER_LITERAL}
-		|REAL_LITERAL {text=input.LT(-1).getText(); literalType=Literal.Type.REAL_LITERAL}
-		//|BASED_LITERAL {str=input.LT(-1).getText(); literalType=Literal.Type.BASED_LITERAL} //TODO
+physical_literal<out PhysicalLiteral literal> =
+		(.
+			String text=la.val;
+			scala.Enumeration.Value literalType=null;
+			Position pos=toPosition(la);
+		.)
+		(
+		INTEGER_LITERAL (.literalType=LiteralType.INTEGER_LITERAL();.)
+		|REAL_LITERAL (.literalType=LiteralType.REAL_LITERAL();.)
 		)
-		unit_name=identifier
-		{$literal_ =new PhysicalLiteral(toPosition(firstToken),text,$unit_name.id,literalType)}
-		;
-	
+		identifier<out Identifier unit_name>
+		(.literal =new PhysicalLiteral(pos,text,unit_name,literalType);.)
+		.
+/*	TODO	
 element_association returns [Aggregate.ElementAssociation element]
 	  : ( (choices ARROW)=> choices ARROW )? expression 
 	  	{$element=new Aggregate.ElementAssociation($choices.choices_,$expression.expr)}
@@ -1776,8 +1788,6 @@ element_association returns [Aggregate.ElementAssociation element]
 choice<out Object x> = "öksdf".
 
 element_association<out Object x> = "öksdsdf".
-
-physical_literal<out Object x> = "öksdsdf".
 
 aggregate<out Aggregate aggregate> =
 		(. MyListBuffer<Aggregate.ElementAssociation> elements=new MyListBuffer<Aggregate.ElementAssociation>(); .)

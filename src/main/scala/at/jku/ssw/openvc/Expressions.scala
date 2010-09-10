@@ -67,7 +67,9 @@ object FactorOperator extends Enumeration {
   type Operator = FactorOperator.Value
   val POW, ABS, NOT = Value
 }
-final case class Factor(position: Position, left: Expression, operator: FactorOperator.Operator, rightOption: Option[Expression] = None) extends Expression
+final case class Factor(position: Position, left: Expression, operator: FactorOperator.Operator, rightOption: Option[Expression] = None) extends Expression {
+  def this(position: Position, left: Expression, operator: FactorOperator.Operator) = this (position, left, operator, None)
+}
 
 final case class FunctionCallExpression(functionName: SelectedName, parameterAssociationList: Option[AssociationList]) extends Expression {
   val position = functionName.position
@@ -90,6 +92,9 @@ object SignOperator extends Enumeration {
 
 final case class SimpleExpression(position: Position, signOperator: Option[SignOperator.Operator], left: Expression, addOperator: Option[AddOperator.Operator], rightOption: Option[Expression])
         extends Expression {
+  def this(position: Position, signOperator: SignOperator.Operator, left: Expression) = this (position, Option(signOperator), left, None, None)
+
+  def this(position: Position, left: Expression, addOperator: AddOperator.Operator, right: Expression) = this (position, None, left, Option(addOperator), Option(right))
   require(addOperator.isDefined == rightOption.isDefined)
 }
 
