@@ -52,7 +52,7 @@ object Identifier {
 
   def apply(text: String) = new Identifier(Position.Empty, text)
 }
-final class Identifier(val position: Position, val text: String) extends Locatable  {
+final class Identifier(val position: Position, val text: String) extends Locatable {
   override val toString: String = this.text
 
   override def equals(other: Any): Boolean =
@@ -66,12 +66,11 @@ final class Identifier(val position: Position, val text: String) extends Locatab
 
 final class Target(val nameOrAggregate: Either[Name, Aggregate])
 
-object Range {
-  type Direction = Direction.Value
-  object Direction extends Enumeration {
-    val To, Downto = Value
-  }
+object Range extends Enumeration {
+  type Direction = Range.Value
+  val To, Downto = Value
 }
+
 final class Range(val fromExpression: Expression, val direction: Range.Direction, val toExpression: Expression, val attributeNameOption: Option[Name]) extends Locatable {
   val position = attributeNameOption match {
     case None => fromExpression.position
@@ -79,13 +78,12 @@ final class Range(val fromExpression: Expression, val direction: Range.Direction
   }
 }
 
-object DelayMechanism {
-  type DelayType = DelayType.Value
-  object DelayType extends Enumeration {
-    val TRANSPORT, INERTIAL = Value
-  }
+object DelayMechanism extends Enumeration {
+  type Type = DelayMechanism.Value
+  val TRANSPORT, INERTIAL = Value
 }
-final class DelayMechanism(val delayType: DelayMechanism.DelayType, val rejectExpression: Option[Expression])
+
+final class DelayMechanism(val delayType: DelayMechanism.Type, val rejectExpression: Option[Expression])
 
 final class DiscreteRange(val rangeOrSubTypeIndication: Either[Range, SubTypeIndication]) extends Locatable {
   val position = rangeOrSubTypeIndication match {
@@ -113,7 +111,7 @@ final class Waveform(val elements: Seq[Waveform.Element]) {
 }
 
 object Choices {
-  final class Choice(val rangeOrExpression: Option[Either[DiscreteRange, Expression]]){
+  final class Choice(val rangeOrExpression: Option[Either[DiscreteRange, Expression]]) {
     // expression,discreteRange == None => OTHERS
     val isOthers = rangeOrExpression.isEmpty
   }
@@ -152,26 +150,26 @@ final class Name(val identifier: Identifier, val parts: Seq[Name.Part]) extends 
   val position = identifier.position
 }
 
-object InterfaceList {
-  type InterfaceMode = InterfaceMode.Value
-  object InterfaceMode extends Enumeration {
-    val IN, OUT, INOUT, BUFFER, LINKAGE = Value
-  }
+object InterfaceMode extends Enumeration {
+  type Mode = InterfaceMode.Value
+  val IN, OUT, INOUT, BUFFER, LINKAGE = Value
+}
 
+object InterfaceList {
   abstract sealed class AbstractInterfaceElement extends Locatable {
     val identifierList: Seq[Identifier]
     val expression: Option[Expression]
-    val interfaceMode: Option[InterfaceMode]
+    val interfaceMode: Option[InterfaceMode.Value]
     val subType: SubTypeIndication
     val position = identifierList.head.position
   }
-  final case class InterfaceConstantDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication, val expression: Option[Expression]) extends AbstractInterfaceElement {
+  final case class InterfaceConstantDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication, expression: Option[Expression]) extends AbstractInterfaceElement {
     val interfaceMode = Some(InterfaceMode.IN)
   }
 
-  final case class InterfaceVariableDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, val expression: Option[Expression]) extends AbstractInterfaceElement
+  final case class InterfaceVariableDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode.Value], subType: SubTypeIndication, expression: Option[Expression]) extends AbstractInterfaceElement
 
-  final case class InterfaceSignalDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, bus: Boolean, val expression: Option[Expression]) extends AbstractInterfaceElement
+  final case class InterfaceSignalDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode.Value], subType: SubTypeIndication, bus: Boolean, expression: Option[Expression]) extends AbstractInterfaceElement
 
   final case class InterfaceFileDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication) extends AbstractInterfaceElement {
     val expression: Option[Expression] = None
@@ -331,13 +329,11 @@ final case class ConstantDeclaration(position: Position, identifierList: Seq[Ide
 final case class FileDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, fileOpenKindExpression: Option[Expression], fileLogicalName: Option[Expression])
         extends ObjectDeclaration
 
-object SignalDeclaration {
-  type Type = Type.Value
-  object Type extends Enumeration {
-    val REGISTER, BUS = Value
-  }
+object SignalType extends Enumeration {
+  val REGISTER, BUS = Value
 }
-final case class SignalDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, signalType: Option[SignalDeclaration.Type], defaultExpression: Option[Expression])
+
+final case class SignalDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, signalType: Option[SignalType.Value], defaultExpression: Option[Expression])
         extends ObjectDeclaration
 
 final case class ComponentDeclaration(position: Position, identifier: Identifier, genericInterfaceList: Option[InterfaceList], portInterfaceList: Option[InterfaceList])
