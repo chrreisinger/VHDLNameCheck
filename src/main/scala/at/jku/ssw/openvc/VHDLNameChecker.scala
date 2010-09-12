@@ -1,21 +1,3 @@
-/*
- *     OpenVC, an open source VHDL compiler/simulator
- *     Copyright (C) 2010  Christian Reisinger
- *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package at.jku.ssw.openvc
 
 import at.jku.ssw.openvc.ast.Position
@@ -27,60 +9,28 @@ final class CheckerMessage(val position: Position, val message: String) {
 }
 
 object ASTBuilder {
-  import org.antlr.runtime.{ANTLRStringStream, ANTLRInputStream, CharStream, CommonTokenStream}
-  //import at.jku.ssw.openvc.ast.parser.{VHDLParser, VHDLLexer}
-  import java.io.{InputStream, FileInputStream}
+  import java.io.{InputStream, FileInputStream, ByteArrayInputStream}
 
-  private final class CaseInsensitiveStringStream(input: String) extends ANTLRStringStream(input) {
-    override def LA(i: Int): Int = {
-      val laToken = super.LA(i)
-      if (laToken != 0 && laToken != CharStream.EOF) return Character.toLowerCase(laToken)
-      laToken
-    }
+  def fromInputStream(inputStream: InputStream): DesignFile = {
+    val scanner = new Scanner(inputStream)
+    val parser = new Parser(scanner)
+    parser.VHDL()
   }
 
-  private final class CaseInsensitiveInputStream(stream: InputStream) extends ANTLRInputStream(stream) {
-    override def LA(i: Int): Int = {
-      val laToken = super.LA(i)
-      if (laToken != 0 && laToken != CharStream.EOF) return Character.toLowerCase(laToken)
-      laToken
-    }
-  }
+  def fromFile(fileName: String): DesignFile = fromInputStream(new FileInputStream(fileName))
 
-  type ASTResult = (DesignFile, Seq[CheckerMessage])
+  def fromText(code: String): DesignFile = fromInputStream(new ByteArrayInputStream(code.getBytes("utf-8")))
 
-  private def fromCharStream(caseInsensitiveStringStream: CharStream, configuration: VHDLNameChecker.Configuration): ASTResult = {
-   /*
-	val lexer = new VHDLLexer(caseInsensitiveStringStream)
-    val tokens = new CommonTokenStream(lexer)
-    val parser = new VHDLParser(tokens)
-    lexer.ams = configuration.amsEnabled
-    parser.ams = configuration.amsEnabled
-    val designFile = parser.design_file()
-    (designFile, parser.syntaxErrors)
-    
-	val scanner = new Scanner(arg[0])
-	val parser = new Parser(scanner)
-	parser.Parse()
-	    */
-	  null
-  }
-
-  def fromFile(fileName: String, configuration: VHDLNameChecker.Configuration): ASTResult =
-    fromCharStream(new CaseInsensitiveInputStream(new FileInputStream(fileName)), configuration)
-
-  def fromText(code: String, configuration: VHDLNameChecker.Configuration): ASTResult =
-    fromCharStream(new CaseInsensitiveStringStream(code), configuration)
 }
 
 object VHDLNameChecker {
-  final class Configuration(val amsEnabled: Boolean, val debug: Boolean, val properties: Map[Class[_], Regex])
+  final class Configuration(val debug: Boolean, val properties: Map[Class[_], Regex])
 
-  final class CheckResult(val syntaxErrors: Seq[CheckerMessage], val checkErrors: Seq[CheckerMessage], val sourceFile: String)
+  final class CheckResult(val checkErrors: Seq[CheckerMessage], val sourceFile: String)
 
-  private def check(configuration: Configuration, builder: (String, Configuration) => (DesignFile, Seq[CheckerMessage]), source: String, fileName: String): CheckResult = {
+  private def check(configuration: Configuration, builder: (String) => DesignFile, source: String, fileName: String): CheckResult = {
     val parseStart = System.currentTimeMillis
-    val (designFile, syntaxErrors) = builder(source, configuration)
+    val designFile = builder(source)
     val parseTime = System.currentTimeMillis - parseStart
 
     val semanticCheckStart = System.currentTimeMillis
@@ -92,10 +42,10 @@ object VHDLNameChecker {
       println("check time:" + semanticCheckTime)
       println("complete time:" + (System.currentTimeMillis - parseStart))
     }
-    new CheckResult(syntaxErrors, checkErrors, fileName)
+    new CheckResult(checkErrors, fileName)
   }
 
   def checkFile(configuration: Configuration, file: String): CheckResult = check(configuration, ASTBuilder.fromFile, file, file)
 
-  def checkFileFromText(configuration: Configuration, code: String, file: String): CheckResult = check(configuration, ASTBuilder.fromText, code, file)
+  def checkText(configuration: Configuration, code: String, file: String): CheckResult = check(configuration, ASTBuilder.fromText, code, file)
 }

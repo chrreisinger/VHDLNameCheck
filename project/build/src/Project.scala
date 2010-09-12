@@ -2,7 +2,6 @@ import sbt._
 import de.element34.sbteclipsify._
 
 class Project(info: ProjectInfo) extends DefaultProject(info) with Eclipsify with IdeaProject with ProguardProject {
-  val antlrRuntimeJar = "org.antlr" % "antlr-runtime" % "3.2"
   val scalaTestJar = "org.scalatest" % "scalatest" % "1.2"
   val codaRepo = "Coda Hale's Repository" at "http://repo.codahale.com/"
   val fig = "com.codahale" %% "fig" % "1.0.3"// withSources ()

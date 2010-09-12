@@ -1,38 +1,10 @@
-/*
- *     OpenVC, an open source VHDL compiler/simulator
- *     Copyright (C) 2010  Christian Reisinger
- *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package at.jku.ssw.openvc.ast {
 
-import at.jku.ssw.openvc.ast.expressions.Expression
+import expressions.Expression
 import declarations.UseClause
 
-object Position {
-  def apply(line: Int, charPosition: Int) = new Position(line, charPosition)
-
-  val Empty = Position(-1, -1)
-}
-
-final class Position(val line: Int, val charPosition: Int) extends java.io.Serializable {
+final class Position(val line: Int, val charPosition: Int) {
   override def toString = "Position(" + line + "," + charPosition + ")"
-
-  def addLineOffset(lineOffset: Int): Position = new Position(this.line + lineOffset, this.charPosition)
-
-  def addCharacterOffset(characterOffset: Int): Position = new Position(this.line, this.charPosition + characterOffset)
 }
 
 trait Locatable {
@@ -43,15 +15,6 @@ abstract sealed class ASTNode extends Locatable
 
 abstract sealed class DeclarativeItem extends ASTNode
 
-case object LeafNode extends ASTNode {
-  val position = Position.Empty
-}
-
-object Identifier {
-  def apply(position: Position, text: String) = new Identifier(position, text)
-
-  def apply(text: String) = new Identifier(Position.Empty, text)
-}
 final class Identifier(val position: Position, val text: String) extends Locatable {
   override val toString: String = this.text
 
@@ -66,24 +29,16 @@ final class Identifier(val position: Position, val text: String) extends Locatab
 
 final class Target(val nameOrAggregate: Either[Name, Aggregate])
 
-object Range extends Enumeration {
-  type Direction = Range.Value
-  val To, Downto = Value
-}
+final class Range(val fromExpression: Expression, val direction: Direction, val toExpression: Expression, val attributeNameOption: Option[Name]) extends Locatable {
+  def this(fromExpression: Expression, direction: Direction, toExpression: Expression) = this (fromExpression, direction, toExpression, None)
 
-final class Range(val fromExpression: Expression, val direction: Range.Direction, val toExpression: Expression, val attributeNameOption: Option[Name]) extends Locatable {
   val position = attributeNameOption match {
     case None => fromExpression.position
     case Some(attribute) => attribute.position
   }
 }
 
-object DelayMechanism extends Enumeration {
-  type Type = DelayMechanism.Value
-  val TRANSPORT, INERTIAL = Value
-}
-
-final class DelayMechanism(val delayType: DelayMechanism.Type, val rejectExpression: Option[Expression])
+final class DelayMechanism(val delayType: DelayType, val rejectExpression: Option[Expression])
 
 final class DiscreteRange(val rangeOrSubTypeIndication: Either[Range, SubTypeIndication]) extends Locatable {
   val position = rangeOrSubTypeIndication match {
@@ -144,7 +99,7 @@ object Name {
 }
 
 final class SelectedName(val identifiers: Seq[Identifier]) extends Locatable {
-  val position = identifiers.headOption.map(_.position).getOrElse(Position.Empty)
+  val position = identifiers.head.position
   override val toString = identifiers.mkString(".")
 }
 
@@ -152,26 +107,20 @@ final class Name(val identifier: Identifier, val parts: Seq[Name.Part]) extends 
   val position = identifier.position
 }
 
-object InterfaceMode extends Enumeration {
-  type Mode = InterfaceMode.Value
-  val IN, OUT, INOUT, BUFFER, LINKAGE = Value
-}
-
 object InterfaceList {
-  abstract sealed class AbstractInterfaceElement extends Locatable {
+  abstract sealed class AbstractInterfaceElement {
     val identifierList: Seq[Identifier]
     val expression: Option[Expression]
-    val interfaceMode: Option[InterfaceMode.Value]
+    val interfaceMode: Option[InterfaceMode]
     val subType: SubTypeIndication
-    val position = identifierList.head.position
   }
   final case class InterfaceConstantDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication, expression: Option[Expression]) extends AbstractInterfaceElement {
     val interfaceMode = Some(InterfaceMode.IN)
   }
 
-  final case class InterfaceVariableDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode.Value], subType: SubTypeIndication, expression: Option[Expression]) extends AbstractInterfaceElement
+  final case class InterfaceVariableDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, expression: Option[Expression]) extends AbstractInterfaceElement
 
-  final case class InterfaceSignalDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode.Value], subType: SubTypeIndication, bus: Boolean, expression: Option[Expression]) extends AbstractInterfaceElement
+  final case class InterfaceSignalDeclaration(identifierList: Seq[Identifier], interfaceMode: Option[InterfaceMode], subType: SubTypeIndication, bus: Boolean, expression: Option[Expression]) extends AbstractInterfaceElement
 
   final case class InterfaceFileDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication) extends AbstractInterfaceElement {
     val expression: Option[Expression] = None
@@ -282,11 +231,7 @@ final case class IfGenerateStatement(position: Position, label: Option[Identifie
 final case class ForGenerateStatement(position: Position, label: Option[Identifier], loopIdentifier: Identifier, discreteRange: DiscreteRange, declarativeItems: Seq[DeclarativeItem],
                                       statementList: Seq[ConcurrentStatement]) extends ConcurrentStatement
 
-object ComponentType extends Enumeration {
-  val COMPONENT, ENTITY, CONFIGURATION = Value
-}
-
-final case class ComponentInstantiationStatement(position: Position, label: Identifier, componentType: ComponentType.Value, name: SelectedName, architectureIdentifier: Option[Identifier],
+final case class ComponentInstantiationStatement(position: Position, label: Identifier, componentType: ComponentType, name: SelectedName, architectureIdentifier: Option[Identifier],
                                                  genericAssociationList: Option[AssociationList], portAssociationList: Option[AssociationList]) extends ConcurrentStatement
 
 final case class ProcessStatement(position: Position, label: Option[Identifier], postponed: Boolean, sensitivityList: Option[Seq[Name]], declarativeItems: Seq[DeclarativeItem],
@@ -295,7 +240,6 @@ final case class ProcessStatement(position: Position, label: Option[Identifier],
 final case class BlockStatement(position: Position, label: Option[Identifier], guardExpression: Option[Expression], genericInterfaceList: Option[InterfaceList],
                                 genericAssociationList: Option[AssociationList], portInterfaceList: Option[InterfaceList], portAssociationList: Option[AssociationList],
                                 declarativeItems: Seq[DeclarativeItem], statementList: Seq[ConcurrentStatement]) extends ConcurrentStatement
-
 }
 
 package declarations {
@@ -304,14 +248,9 @@ import at.jku.ssw.openvc.ast.expressions._
 import at.jku.ssw.openvc.ast.sequentialStatements.SequentialStatement
 import at.jku.ssw.openvc.ast.concurrentStatements.ConcurrentStatement
 
-object EntityClass extends Enumeration {
-  val ENTITY, ARCHITECTURE, CONFIGURATION, PACKAGE, PROCEDURE, FUNCTION, TYPE, SUBTYPE, CONSTANT, SIGNAL, VARIABLE, FILE, COMPONENT, LABEL,
-  LITERAL, UNITS, GROUP, NATURE, SUBNATURE, QUANTITY, TERMINAL = Value
-}
-
 final case class AliasDeclaration(position: Position, identifier: Identifier, subType: Option[SubTypeIndication], name: Name, signature: Option[Signature]) extends DeclarativeItem
 
-final case class AttributeSpecification(position: Position, identifier: Identifier, entityList: Either[Seq[(Identifier, Option[Signature])], Identifier], entityClass: EntityClass.Value, expression: Expression) extends DeclarativeItem
+final case class AttributeSpecification(position: Position, identifier: Identifier, entityList: Either[Seq[(Identifier, Option[Signature])], Identifier], entityClass: EntityClass, expression: Expression) extends DeclarativeItem
 
 final case class AttributeDeclaration(position: Position, identifier: Identifier, typeName: SelectedName) extends DeclarativeItem
 
@@ -329,11 +268,7 @@ final case class ConstantDeclaration(position: Position, identifierList: Seq[Ide
 final case class FileDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, fileOpenKindExpression: Option[Expression], fileLogicalName: Option[Expression])
         extends ObjectDeclaration
 
-object SignalType extends Enumeration {
-  val REGISTER, BUS = Value
-}
-
-final case class SignalDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, signalType: Option[SignalType.Value], defaultExpression: Option[Expression])
+final case class SignalDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, signalType: Option[SignalType], defaultExpression: Option[Expression])
         extends ObjectDeclaration
 
 final case class ComponentDeclaration(position: Position, identifier: Identifier, genericInterfaceList: Option[InterfaceList], portInterfaceList: Option[InterfaceList])
@@ -401,7 +336,7 @@ final case class ConfigurationSpecification(position: Position) extends Declarat
 final case class GroupDeclaration(position: Position, identifier: Identifier, groupTemplateName: SelectedName, constituentList: Seq[Either[Name, Identifier]]) extends DeclarativeItem
 
 object GroupTemplateDeclaration {
-  final class Element(val entityClass: EntityClass.Value, val box: Boolean)
+  final class Element(val entityClass: EntityClass, val box: Boolean)
 }
 final case class GroupTemplateDeclaration(position: Position, identifier: Identifier, elements: Seq[GroupTemplateDeclaration.Element]) extends DeclarativeItem
 

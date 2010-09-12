@@ -2,7 +2,7 @@ package alu_tb is
 end alu_tb;
 
 package body alu_tb is
-  
+  /*
   type myEnum is (first, second, third);
   type myAccess is access integer;
   type myFile is file of integer;
@@ -22,6 +22,7 @@ type SharedCounter is protected
     procedure decrement (N : integer := 1);
     impure function value return integer;
 end protected SharedCounter;
+*/
 
 type SharedCounter is protected body
   variable counter : integer := 0;

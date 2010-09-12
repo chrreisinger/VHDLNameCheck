@@ -1,21 +1,3 @@
-/*
- *     OpenVC, an open source VHDL compiler/simulator
- *     Copyright (C) 2010  Christian Reisinger
- *
- *     This program is free software: you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation, either version 3 of the License, or
- *     (at your option) any later version.
- *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
- *
- *     You should have received a copy of the GNU General Public License
- *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package at.jku.ssw.openvc
 
 import at.jku.ssw.openvc.VHDLNameChecker._
@@ -34,7 +16,7 @@ object Main {
       val result = VHDLNameChecker.checkFile(configuration, file)
       val lines = toLines(file)
       printResultTo(result, new PrintWriter(System.out), Some(lines))
-      printResultToHTML(result, lines, "output.html")
+      //printResultToHTML(result, lines, "output.html")
       //listFiles(new File("C:\\Users\\christian\\Desktop\\vlsi\\"), filter, true)
     } catch {
       case e: Exception => e.printStackTrace
@@ -43,8 +25,8 @@ object Main {
 
   def printResultTo(result: CheckResult, writer: PrintWriter, sourceLinesOption: Option[IndexedSeq[String]]): Unit = {
     import result._
-    if (!syntaxErrors.isEmpty || !checkErrors.isEmpty) {
-      writer.println("syntax errors:" + syntaxErrors.size + " check errors:" + checkErrors.size)
+    if (!checkErrors.isEmpty) {
+      writer.println(" check errors:" + checkErrors.size)
     }
     def printMessages(prefix: String, messages: Seq[CheckerMessage]): Unit = {
       for (msg <- messages) {
@@ -52,11 +34,10 @@ object Main {
         sourceLinesOption.foreach {
           sourceLines =>
             writer.println(sourceLines(msg.position.line - 1).toLowerCase)
-            writer.println((" " * msg.position.charPosition) + "^")
+            writer.println((" " * (msg.position.charPosition - 1)) + "^")
         }
       }
     }
-    printMessages("syntaxError", syntaxErrors)
     printMessages("--", checkErrors)
     writer.flush
   }
@@ -95,16 +76,14 @@ object Main {
       val config = new com.codahale.fig.Configuration(file)
       (for (clazz <- classes) yield (clazz -> config("NameChecker." + clazz.getSimpleName).or(defaultRexEx).r)).toMap
     }
-    var ams = false
     var debug = false
     for (arg <- arguments) {
       arg match {
-        case "-ams" => ams = true
         case "-debug" => debug = true
         case _ => println("illegal argument:" + arg)
       }
     }
-    new Configuration(ams, debug, loadConfiguration("configuration.json"))
+    new Configuration(debug, loadConfiguration("configuration.json"))
   }
 
 

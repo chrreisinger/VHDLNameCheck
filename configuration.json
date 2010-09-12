@@ -6,7 +6,7 @@
          //"EntityDeclaration" :
          //"ArchitectureDeclaration" :
          //"ConfigurationDeclaration" :
-         //"VariableDeclaration" :
+         "VariableDeclaration" : "foo"
          //"ConstantDeclaration" :
          //"SignalDeclaration" :
          //"FileDeclaration" :
