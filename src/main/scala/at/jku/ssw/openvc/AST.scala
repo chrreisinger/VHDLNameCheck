@@ -69,6 +69,7 @@ final class Waveform(val elements: Seq[Waveform.Element]) {
 
 object Choices {
   final class Choice(val rangeOrExpression: Option[Either[DiscreteRange, Expression]]) {
+    def this() = this (None)
     // expression,discreteRange == None => OTHERS
     val isOthers = rangeOrExpression.isEmpty
   }
@@ -95,6 +96,9 @@ object Name {
   }
   final case class AttributePart(signature: Option[Signature], identifier: Identifier, expression: Option[Expression]) extends Part {
     val position = identifier.position
+  }
+  final case class AssociationListPart(associationList: AssociationList) extends Part {
+    val position = null //TODO
   }
 }
 

@@ -1,0 +1,5 @@
+package at.jku.ssw.openvc.ast.expressions;
+
+public enum LiteralType {
+	REAL_LITERAL, INTEGER_LITERAL, BASED_LITERAL, CHARACTER_LITERAL, STRING_LITERAL, BIT_STRING_LITERAL, NULL_LITERAL
+}

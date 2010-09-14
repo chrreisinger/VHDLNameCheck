@@ -131,25 +131,24 @@ public class Parser {
 	public static final int _NEQ = 112;
 	public static final int _VAR_ASSIGN = 113;
 	public static final int _BOX = 114;
-	public static final int _DBLQUOTE = 115;
-	public static final int _SEMICOLON = 116;
-	public static final int _COMMA = 117;
-	public static final int _AMPERSAND = 118;
-	public static final int _LPAREN = 119;
-	public static final int _RPAREN = 120;
-	public static final int _LBRACKET = 121;
-	public static final int _RBRACKET = 122;
-	public static final int _COLON = 123;
-	public static final int _MUL = 124;
-	public static final int _DIV = 125;
-	public static final int _PLUS = 126;
-	public static final int _MINUS = 127;
-	public static final int _LT = 128;
-	public static final int _GT = 129;
-	public static final int _EQ = 130;
-	public static final int _BAR = 131;
-	public static final int _DOT = 132;
-	public static final int maxT = 134;
+	public static final int _SEMICOLON = 115;
+	public static final int _COMMA = 116;
+	public static final int _AMPERSAND = 117;
+	public static final int _LPAREN = 118;
+	public static final int _RPAREN = 119;
+	public static final int _LBRACKET = 120;
+	public static final int _RBRACKET = 121;
+	public static final int _COLON = 122;
+	public static final int _MUL = 123;
+	public static final int _DIV = 124;
+	public static final int _PLUS = 125;
+	public static final int _MINUS = 126;
+	public static final int _LT = 127;
+	public static final int _GT = 128;
+	public static final int _EQ = 129;
+	public static final int _BAR = 130;
+	public static final int _DOT = 131;
+	public static final int maxT = 132;
 
 	static final boolean T = true;
 	static final boolean x = false;
@@ -183,8 +182,8 @@ public class Parser {
 	
 	private static <T> Option<T> toOption(T x){return Option.apply(x);}
 	
-	//group_template:GROUP identifier IS LPAREN ...
-	//group_declaration:GROUP identifier COLON ...
+	//group_template = GROUP identifier IS LPAREN ...
+	//group_declaration = GROUP identifier COLON ...
 	//la == GROUP
 	private boolean IsGroupTemplate() {
 		if (la.kind!=_GROUP) return false;
@@ -196,8 +195,8 @@ public class Parser {
 		return next.kind==_IS;
 	}
 
-	//attribute_declaration: ATTRIBUTE identifier COLON type_mark SEMICOLON 
-	//attribute_specification: ATTRIBUTE identifier OF entity_name_list COLON entity_class IS expression SEMICOLON 
+	//attribute_declaration = ATTRIBUTE identifier COLON type_mark SEMICOLON 
+	//attribute_specification = ATTRIBUTE identifier OF entity_name_list COLON entity_class IS expression SEMICOLON 
 	//la == ATTRIBUTE
 	private boolean IsAttributeDeclaration() {
 		if (la.kind!=_ATTRIBUTE) return false;
@@ -209,8 +208,8 @@ public class Parser {
 		return next.kind==_COLON;
 	}
 
-	//physical_type_definition: RANGE range UNITS ...
-	//integer_or_floating_point_type_definition: RANGE range SEMICOLON
+	//physical_type_definition = RANGE range UNITS ...
+	//integer_or_floating_point_type_definition = RANGE range SEMICOLON
 	//la == RANGE
 	private boolean IsPhysicalType() {
 		if (la.kind!=_RANGE) return false;
@@ -222,9 +221,9 @@ public class Parser {
 		return next.kind==_UNITS;
 	}
 
-	//constrained array: LPAREN index_subtype_definition (COMMA index_subtype_definition)* RPAREN OF subtype_indication
-	//index_subtype_definition: type_mark RANGE BOX
-	//index_constraint: LPAREN discrete_range (COMMA  discrete_range)* RPAREN
+	//constrained array = LPAREN index_subtype_definition (COMMA index_subtype_definition)* RPAREN OF subtype_indication
+	//index_subtype_definition = type_mark RANGE BOX
+	//index_constraint = LPAREN discrete_range (COMMA  discrete_range)* RPAREN
 	//la==LPAREN
 	private boolean IsIndexSubtypeDefinition() {
 		scanner.ResetPeek();
@@ -235,9 +234,9 @@ public class Parser {
 		return next.kind==_BOX;
 	}
 	
-	//procedure_call_statement: selected_name [LPAREN association_list RPAREN] SEMICOLON
-	//signal_or_variable_assignment_statement: target (VAR_ASSIGN|LEQ) ....
-	//target: name | aggregate
+	//procedure_call_statement = selected_name [LPAREN association_list RPAREN] SEMICOLON
+	//signal_or_variable_assignment_statement = target (VAR_ASSIGN|LEQ) ....
+	//target = name | aggregate
 	private boolean IsAssignmentStatement() {
 		scanner.ResetPeek();
 		Token next;
@@ -247,22 +246,24 @@ public class Parser {
 		return next.kind==_VAR_ASSIGN || next.kind==_LEQ;
 	}
 	
-	//concurrent_signal_assignment_statement: (target LEQ | WITH) ....
-	//concurrent_procedure_call_statement: selected_name [LPAREN association_list RPAREN] SEMICOLON
-	private boolean IsConcurrentSignalSssignmentStatement() {
+	//concurrent_signal_assignment_statement = (target LEQ | WITH) ....
+	//concurrent_procedure_call_statement = selected_name [LPAREN association_list RPAREN] SEMICOLON
+	private boolean IsConcurrentSignalAssignmentStatement() {
+		if (la.kind==_WITH) return true;
 		scanner.ResetPeek();
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_LEQ && next.kind!=_WITH && next.kind!=_SEMICOLON);
-		return next.kind==_LEQ || next.kind==_WITH;
+		}while (next.kind!=_LEQ && next.kind!=_SEMICOLON);
+		return next.kind==_LEQ;
 	}
+	
 	//
 	//For those parameters with modes, the only modes that are allowed for formal parameters of a procedure are
 	//in, inout, and out. If the mode is in and no object class is explicitly specified, constant is assumed. If the
 	//mode is inout or out, and no object class is explicitly specified, variable is assumed.
 	//
-	//interface_constant_declaration: [CONSTANT] identifier_list COLON [IN] subtype_indication [VAR_ASSIGN expression] 
+	//interface_constant_declaration = [CONSTANT] identifier_list COLON [IN] subtype_indication [VAR_ASSIGN expression] 
 	private boolean IsInterfaceConstantDeclaration() {
 		if (la.kind==_CONSTANT) return true;
 		else if (la.kind==_VARIABLE || la.kind==_SIGNAL || la.kind==_FILE) return false;
@@ -273,7 +274,8 @@ public class Parser {
 		}while (next.kind!=_VAR_ASSIGN && next.kind!=_SEMICOLON && next.kind!=_IN);
 		return next.kind==_IN;
 	}
-	//interface_variable_declaration: [VARIABLE] identifier_list COLON [interface_mode] subtype_indication [VAR_ASSIGN expression]
+	
+	//interface_variable_declaration = [VARIABLE] identifier_list COLON [interface_mode] subtype_indication [VAR_ASSIGN expression]
 	private boolean IsInterfaceVariableDeclaration() {
 		if (la.kind==_VARIABLE) return true;
 		else if (la.kind==_CONSTANT || la.kind==_SIGNAL || la.kind==_FILE) return false;
@@ -284,6 +286,154 @@ public class Parser {
 		}while (next.kind!=_VAR_ASSIGN && next.kind!=_SEMICOLON && next.kind!=_IN && next.kind!=_INOUT && next.kind!=_OUT);
 		return next.kind==_INOUT || next.kind==_OUT;
 	}
+
+	//search fo TO or DOWNTO in range: expression direction expression
+	//choice = discrete_range
+	//	| simple_expression
+	//	| OTHERS		
+	//choices = choice { BAR choice}
+	//case_statement = .... {WHEN choices ARROW sequential_statement_list} ...
+	//element_association = [choices ARROW] expression 
+	//selected_waveform = waveform WHEN choices
+	//selected_signal_assignment = ... selected_waveform {COMMA selected_waveform} SEMICOLON
+	private boolean IsRangeInChoice() {
+		if (la.kind==_OTHERS) return false;
+		scanner.ResetPeek();
+		Token next;
+		do {
+			next = scanner.Peek();
+		}while (next.kind!=_BAR && next.kind!=_ARROW && next.kind!=_COMMA && next.kind!=_SEMICOLON && next.kind!=_TO_TOKEN && next.kind!=_DOWNTO);
+		return next.kind==_TO_TOKEN || next.kind==_DOWNTO;
+	}
+	
+	//search fo TO or DOWNTO in range = expression direction expression
+	//block_configuration_index= 
+	//	  discrete_range
+	//	  |expression
+	//block_specification=
+	//	identifier [LPAREN block_configuration_index RPAREN]
+	//	 | selected_name
+	//block_configuration =
+	//		FOR block_specification
+	//		{use_clause}
+	//		{
+	//			blockConfiguration
+	//			|component_configuration
+	//		}
+	//		END FOR SEMICOLON 
+	private boolean IsDiscreteRangeInBlockConfigurationIndex() {
+		scanner.ResetPeek();
+		Token next;
+		do {
+			next = scanner.Peek();
+		}while (next.kind!=_USE && next.kind!=_FOR && next.kind!=_END_TOKEN && next.kind!=_SEMICOLON && next.kind!=_TO_TOKEN && next.kind!=_DOWNTO);
+		return next.kind==_TO_TOKEN || next.kind==_DOWNTO;
+	}
+	
+		/*
+		architecture_statement =
+		(
+		label_colon<out label> (
+			architecture_statement_with_label<out concurrentStmt,label>
+			| architecture_statement_optional_label<out concurrentStmt,label>
+			)
+		| architecture_statement_optional_label<out concurrentStmt,label>
+		)
+		.
+
+		architecture_statement_with_label =
+				(
+				component_instantiation_statement
+				| block_statement //starts with BLOCK
+				| generate_statement  //starts with FOR|IF
+				)
+				.
+						
+		architecture_statement_optional_label<out ConcurrentStatement concurrentStmt, Identifier label> =
+				[POSTPONED] 
+				(process_statement //starts with PROCESS
+				| concurrent_assertion_statement //starts with ASSERT
+				| IF(IsConcurrentSignalAssignmentStatement())concurrent_signal_assignment_statement
+				| concurrent_procedure_call_statement
+				)
+				
+		component_instantiation_statement =
+		(
+		  [COMPONENT] selected_name
+		  | ENTITY selected_name [LPAREN identifier RPAREN]
+		  | CONFIGURATION selected_name
+		)
+		[generic_map_aspect]
+		[port_map_aspect] SEMICOLON
+	*/
+	private boolean IsArchitecutreStatementWithLabel() {
+		if (la.kind==_COMPONENT || la.kind==_ENTITY || la.kind==_CONFIGURATION  || la.kind==_BLOCK || la.kind==_FOR || la.kind==_IF_TOKEN) return true;
+		else if (la.kind==_POSTPONED || la.kind==_PROCESS || la.kind==_ASSERT || la.kind==_FILE || IsConcurrentSignalAssignmentStatement()) return false;
+		//untscheiden ob component_instantiation_statement oder concurrent_procedure_call_statement
+		scanner.ResetPeek();
+		Token next;
+		do {
+			next = scanner.Peek();
+		}while (next.kind!=_GENERIC && next.kind!=_PORT && next.kind!=_SEMICOLON);
+		return next.kind==_GENERIC || next.kind==_PORT;
+	}	
+	
+	//name_slice_part = LPAREN discrete_range RPAREN.
+	//name_indexed_part = LPAREN expression {COMMA expression}
+	//name_association_list_part = LPAREN association_list RPAREN
+	private boolean IsNameSlicePart() {
+		if (la.kind!=_LPAREN) return false;
+		scanner.ResetPeek();
+		Token next;
+		int count=1;//count LPAREN
+		do {
+			next = scanner.Peek();
+			if (next.kind==_LPAREN) count++;
+			else if (next.kind==_RPAREN) count--;
+		}while (next.kind!=_BAR && next.kind!=_ARROW && next.kind!=_COMMA && next.kind!=_SEMICOLON && next.kind!=_TO_TOKEN && next.kind!=_DOWNTO);
+		return next.kind==_TO_TOKEN || next.kind==_DOWNTO;
+	}
+		
+	/*
+	choice<out Choices.Choice choice> =
+			IF(IsRangeInChoice())discrete_range
+			| simple_expression
+			| OTHERS
+	choices = choice {BAR choice}.
+	element_association = [IF(IsChoiceInElementAssociation()) choices ARROW] expression.
+	aggregate = LPAREN  element_association {COMMA element_association} RPAREN .
+	*/	
+	private boolean IsChoiceInElementAssociation() {
+		scanner.ResetPeek();
+		Token next;
+		int count=1;//count LPAREN
+		do {
+			next = scanner.Peek();
+			if (next.kind==_LPAREN) count++;
+			else if (next.kind==_RPAREN) count--;
+		}while (count!=0 && next.kind!=_COMMA && next.kind!=_ARROW && next.kind!=_SEMICOLON && next.kind!=_OTHERS);
+		return next.kind==_ARROW;
+	}
+	
+	/*
+	formal_part<out Name formal_part> = name<out formal_part> .	
+	actual_part<out Option<Expression> actual_part> =  expression | OPEN .				
+	association_element = [If(IsFormalPartInAssociationElement()) formal_part ARROW] actual_part .		
+	association_list<out AssociationList list> = association_element {COMMA association_element}.
+	LPAREN association_list RPAREN
+	*/
+	private boolean IsFormalPartInAssociationElement() {
+		scanner.ResetPeek();
+		Token next;
+		int count=1;//count LPAREN
+		do {
+			next = scanner.Peek();
+			if (next.kind==_LPAREN) count++;
+			else if (next.kind==_RPAREN) count--;
+		}while (count!=0 && next.kind!=_COMMA && next.kind!=_ARROW && next.kind!=_SEMICOLON && next.kind!=_OPEN);
+		return next.kind==_ARROW;
+	}
+	
 	private Position toPosition(Token token){
 		return new Position(token.line,token.col);
 	}    
@@ -403,7 +553,7 @@ public class Parser {
 		Seq<Identifier>  identifierList;
 		Expect(50);
 		identifierList = identifier_list();
-		Expect(116);
+		Expect(115);
 		return identifierList;
 	}
 
@@ -412,7 +562,7 @@ public class Parser {
 		Position pos=toPosition(la);
 		Expect(100);
 		Seq<SelectedName> list = selected_name_list();
-		Expect(116);
+		Expect(115);
 		useClause=new UseClause(pos,list);
 		return useClause;
 	}
@@ -430,7 +580,7 @@ public class Parser {
 			libraryUnit = package_declaration();
 		} else if (la.kind == 27) {
 			libraryUnit = configuration_declaration();
-		} else SynErr(135);
+		} else SynErr(133);
 		return libraryUnit;
 	}
 
@@ -472,7 +622,7 @@ public class Parser {
 					stmt = concurrent_procedure_call_statement(label,postponed);
 				} else if (la.kind == 72) {
 					stmt = process_statement(label,postponed);
-				} else SynErr(136);
+				} else SynErr(134);
 				concurrentStmts.append(stmt);
 			}
 		}
@@ -483,7 +633,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		entityDecl=new EntityDeclaration(start_identifier,toOption(genericClause),toOption(portClause),declarativeItems.toList(),concurrentStmts.toList());
 		return entityDecl;
 	}
@@ -509,7 +659,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		archDecl=new ArchitectureDeclaration(start_identifier,declarativeItems.toList(),entityName,statementList); 
 		return archDecl;
 	}
@@ -533,7 +683,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		packageBody = new PackageBodyDeclaration(start_identifier,declarativeItems.toList());
 		return packageBody;
 	}
@@ -555,7 +705,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		packageDecl=new PackageDeclaration(start_identifier,declarativeItems.toList());
 		return packageDecl;
 	}
@@ -580,7 +730,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		configDecl=new ConfigurationDeclaration(start_identifier,declarativeItems.toList(),entityName,blockConfig);
 		return configDecl;
 	}
@@ -592,7 +742,7 @@ public class Parser {
 		
 		identifier = identifier();
 		tmpList.append(identifier);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			identifier = identifier();
 			tmpList.append(identifier);
@@ -604,10 +754,10 @@ public class Parser {
 	InterfaceList  generic_clause() {
 		InterfaceList  genericList;
 		Expect(40);
-		Expect(119);
+		Expect(118);
 		genericList = generic_interface_list();
-		Expect(120);
-		Expect(116);
+		Expect(119);
+		Expect(115);
 		return genericList;
 	}
 
@@ -616,7 +766,7 @@ public class Parser {
 		MyListBuffer<InterfaceList.AbstractInterfaceElement> elements=new MyListBuffer<InterfaceList.AbstractInterfaceElement>(); 
 		InterfaceList.InterfaceConstantDeclaration declaration = interface_constant_declaration();
 		elements.append(declaration);
-		while (la.kind == 116) {
+		while (la.kind == 115) {
 			Get();
 			declaration = interface_constant_declaration();
 			elements.append(declaration); 
@@ -632,7 +782,7 @@ public class Parser {
 			Get();
 		}
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		if (la.kind == 45) {
 			Get();
 		}
@@ -648,10 +798,10 @@ public class Parser {
 	InterfaceList  port_clause() {
 		InterfaceList  portList;
 		Expect(69);
-		Expect(119);
+		Expect(118);
 		portList = port_interface_list();
-		Expect(120);
-		Expect(116);
+		Expect(119);
+		Expect(115);
 		return portList;
 	}
 
@@ -660,7 +810,7 @@ public class Parser {
 		MyListBuffer<InterfaceList.AbstractInterfaceElement> elements=new MyListBuffer<InterfaceList.AbstractInterfaceElement>(); 
 		InterfaceList.InterfaceSignalDeclaration declaration = interface_signal_declaration_procedure();
 		elements.append(declaration); 
-		while (la.kind == 116) {
+		while (la.kind == 115) {
 			Get();
 			declaration = interface_signal_declaration_procedure();
 			elements.append(declaration);
@@ -676,7 +826,7 @@ public class Parser {
 			Get();
 		}
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		if (StartOf(7)) {
 			mode = interface_mode();
 		}
@@ -702,14 +852,14 @@ public class Parser {
 		} else if (la.kind == 2) {
 			Get();
 			id=toIdentifier(t,false);
-		} else SynErr(137);
+		} else SynErr(135);
 		return id;
 	}
 
 	DeclarativeItem  entity_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(8))) {SynErr(138); Get();}
+		while (!(StartOf(8))) {SynErr(136); Get();}
 		if (StartOf(9)) {
 			item = subprogram_declaration_or_body();
 		} else if (la.kind == 96) {
@@ -738,14 +888,14 @@ public class Parser {
 			item = group_template_declaration();
 		} else if (la.kind == 41) {
 			item = group_declaration();
-		} else SynErr(139);
+		} else SynErr(137);
 		return item;
 	}
 
 	Identifier  label_colon() {
 		Identifier  label;
 		label = identifier();
-		Expect(123);
+		Expect(122);
 		return label;
 	}
 
@@ -762,7 +912,7 @@ public class Parser {
 			Get();
 			severity_expression = expression();
 		}
-		Expect(116);
+		Expect(115);
 		assertStmt=new ConcurrentAssertionStatement(pos,toOption(label),postponed,expr,toOption(report_expression),toOption(severity_expression));
 		return assertStmt;
 	}
@@ -771,12 +921,12 @@ public class Parser {
 		ConcurrentProcedureCallStatement  procedureCallStmt;
 		AssociationList paramterList=null;
 		SelectedName procedure_name = selected_name();
-		if (la.kind == 119) {
+		if (la.kind == 118) {
 			Get();
 			paramterList = association_list();
-			Expect(120);
+			Expect(119);
 		}
-		Expect(116);
+		Expect(115);
 		procedureCallStmt=new ConcurrentProcedureCallStatement(toOption(label),postponed,procedure_name,toOption(paramterList));
 		return procedureCallStmt;
 	}
@@ -788,10 +938,10 @@ public class Parser {
 		Seq<Name> name_list=null;
 		
 		Expect(72);
-		if (la.kind == 119) {
+		if (la.kind == 118) {
 			Get();
 			name_list = name_list();
-			Expect(120);
+			Expect(119);
 		}
 		if (la.kind == 48) {
 			Get();
@@ -810,7 +960,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		processStmt=new ProcessStatement(pos,toOption(label),postponed,toOption(name_list),declarativeItems.toList(),sequentialStatements);
 		return processStmt;
 	}
@@ -826,7 +976,7 @@ public class Parser {
 		if (la.kind == 48) {
 			subProgramDef = subprogram_body(decl);
 		}
-		Expect(116);
+		Expect(115);
 		if (subProgramDef!=null) declOrBody=subProgramDef; else declOrBody=decl;
 		return declOrBody;
 	}
@@ -839,11 +989,11 @@ public class Parser {
 		if (la.kind == 48) {
 			Get();
 			typeDecl = type_definition(id,pos);
-			Expect(116);
-		} else if (la.kind == 116) {
+			Expect(115);
+		} else if (la.kind == 115) {
 			Get();
 			typeDecl=new IncompleteTypeDeclaration(pos,id);
-		} else SynErr(140);
+		} else SynErr(138);
 		return typeDecl;
 	}
 
@@ -854,7 +1004,7 @@ public class Parser {
 		Identifier identifier = identifier();
 		Expect(48);
 		SubTypeIndication subType = subtype_indication();
-		Expect(116);
+		Expect(115);
 		subTypeDecl=new SubTypeDeclaration(pos,identifier,subType);
 		return subTypeDecl;
 	}
@@ -864,13 +1014,13 @@ public class Parser {
 		Position pos=toPosition(la);Expression expr=null;
 		Expect(28);
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 113) {
 			Get();
 			expr = expression();
 		}
-		Expect(116);
+		Expect(115);
 		constantDecl=new ConstantDeclaration(pos,list,subType,toOption(expr));
 		return constantDecl;
 	}
@@ -880,7 +1030,7 @@ public class Parser {
 		Position pos=toPosition(la);Expression expr=null;boolean reg=false,bus=false;
 		Expect(87);
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 24 || la.kind == 77) {
 			if (la.kind == 77) {
@@ -895,7 +1045,7 @@ public class Parser {
 			Get();
 			expr = expression();
 		}
-		Expect(116);
+		Expect(115);
 		SignalType signalType=null;
 		if(reg) signalType=SignalType.REGISTER;
 		else if (bus) signalType=SignalType.BUS;
@@ -913,13 +1063,13 @@ public class Parser {
 		}
 		Expect(101);
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 113) {
 			Get();
 			expr = expression();
 		}
-		Expect(116);
+		Expect(115);
 		varDecl=new VariableDeclaration(pos,shared,list,subType,toOption(expr));
 		return varDecl;
 	}
@@ -929,7 +1079,7 @@ public class Parser {
 		Position pos=toPosition(la);Expression file_open_kind_expression=null,file_logical_name=null;
 		Expect(36);
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		SubTypeIndication subType = subtype_indication();
 		if (la.kind == 48 || la.kind == 64) {
 			if (la.kind == 64) {
@@ -939,7 +1089,7 @@ public class Parser {
 			Expect(48);
 			file_logical_name = expression();
 		}
-		Expect(116);
+		Expect(115);
 		fileDecl=new FileDeclaration(pos,list,subType,toOption(file_open_kind_expression),toOption(file_logical_name));
 		return fileDecl;
 	}
@@ -949,16 +1099,16 @@ public class Parser {
 		Position pos=toPosition(la);Signature signature=null;SubTypeIndication subType=null;
 		Expect(13);
 		Identifier designator = alias_designator();
-		if (la.kind == 123) {
+		if (la.kind == 122) {
 			Get();
 			subType = subtype_indication();
 		}
 		Expect(48);
 		Name name = name();
-		if (la.kind == 121) {
+		if (la.kind == 120) {
 			signature = signature();
 		}
-		Expect(116);
+		Expect(115);
 		aliasDecl=new AliasDeclaration(pos,designator,toOption(subType),name,toOption(signature));
 		return aliasDecl;
 	}
@@ -968,9 +1118,9 @@ public class Parser {
 		Position pos=toPosition(la);
 		Expect(19);
 		Identifier identifier = identifier();
-		Expect(123);
+		Expect(122);
 		SelectedName type = type_mark();
-		Expect(116);
+		Expect(115);
 		attributeDecl=new AttributeDeclaration(pos,identifier,type);
 		return attributeDecl;
 	}
@@ -982,11 +1132,11 @@ public class Parser {
 		Identifier identifier = identifier();
 		Expect(62);
 		nameList = entity_name_list();
-		Expect(123);
+		Expect(122);
 		EntityClass entityClass = entity_class();
 		Expect(48);
 		Expression expr = expression();
-		Expect(116);
+		Expect(115);
 		node=new AttributeSpecification(pos,identifier,nameList,entityClass,expr);
 		return node;
 	}
@@ -1003,12 +1153,12 @@ public class Parser {
 		} else if (la.kind == 14) {
 			Get();
 			id=toIdentifier(t);
-		} else SynErr(141);
-		Expect(123);
+		} else SynErr(139);
+		Expect(122);
 		SelectedName type = type_mark();
 		Expect(12);
 		Expression expr = expression();
-		Expect(116);
+		Expect(115);
 		disconnectSpec= new DisconnectionSpecification(pos,id==null?new Left<Seq<SelectedName>,Identifier>(list):new Right<Seq<SelectedName>,Identifier>(id),type,expr);
 		return disconnectSpec;
 	}
@@ -1021,16 +1171,16 @@ public class Parser {
 		Expect(41);
 		Identifier identifier = identifier();
 		Expect(48);
-		Expect(119);
+		Expect(118);
 		GroupTemplateDeclaration.Element entry = entity_class_entry();
 		elements.append(entry);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			entry = entity_class_entry();
 			elements.append(entry);
 		}
-		Expect(120);
-		Expect(116);
+		Expect(119);
+		Expect(115);
 		groupTemplateDecl=new GroupTemplateDeclaration(pos,identifier,elements.toList());
 		return groupTemplateDecl;
 	}
@@ -1040,12 +1190,12 @@ public class Parser {
 		Position pos=toPosition(la);Seq<Either<Name,Identifier>> list=null;
 		Expect(41);
 		Identifier identifier = identifier();
-		Expect(123);
+		Expect(122);
 		SelectedName selectedName = selected_name();
-		Expect(119);
+		Expect(118);
 		list = group_constituent_list();
-		Expect(120);
-		Expect(116);
+		Expect(119);
+		Expect(115);
 		groupDecl=new GroupDeclaration(pos,identifier,selectedName,list);
 		return groupDecl;
 	}
@@ -1054,7 +1204,7 @@ public class Parser {
 		SelectedName  name;
 		MyListBuffer<Identifier> parts=new MyListBuffer<Identifier>();
 		Identifier prefix = name_prefix();
-		while (la.kind == 132) {
+		while (la.kind == 131) {
 			Name.SelectedPart selectedPart = name_selected_part();
 			parts.append(selectedPart.identifier());
 		}
@@ -1065,7 +1215,7 @@ public class Parser {
 	DeclarativeItem  block_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(11))) {SynErr(142); Get();}
+		while (!(StartOf(11))) {SynErr(140); Get();}
 		if (StartOf(9)) {
 			item = subprogram_declaration_or_body();
 		} else if (la.kind == 96) {
@@ -1098,7 +1248,7 @@ public class Parser {
 			item = group_template_declaration();
 		} else if (la.kind == 41) {
 			item = group_declaration();
-		} else SynErr(143);
+		} else SynErr(141);
 		return item;
 	}
 
@@ -1116,14 +1266,14 @@ public class Parser {
 	DeclarativeItem  configuration_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(13))) {SynErr(144); Get();}
+		while (!(StartOf(13))) {SynErr(142); Get();}
 		if (la.kind == 100) {
 			item = use_clause();
 		} else if (la.kind == 41) {
 			item = group_declaration();
 		} else if (la.kind == 19) {
 			item = attribute_specification();
-		} else SynErr(145);
+		} else SynErr(143);
 		return item;
 	}
 
@@ -1149,23 +1299,36 @@ public class Parser {
 		}
 		Expect(33);
 		Expect(37);
-		Expect(116);
+		Expect(115);
 		blockConfig=new BlockConfiguration(blockSpec,useClauses.toList(),configurations.toList());
 		return blockConfig;
 	}
 
 	Either<DiscreteRange,Expression>  block_configuration_index() {
 		Either<DiscreteRange,Expression>  index;
-		Expression expr = expression();
-		index=new Right<DiscreteRange,Expression>(expr);
+		index=null;
+		if (IsDiscreteRangeInBlockConfigurationIndex()) {
+			DiscreteRange discreteRange = discrete_range();
+			index=new Left<DiscreteRange,Expression>(discreteRange);
+		} else if (StartOf(14)) {
+			Expression expr = expression();
+			index=new Right<DiscreteRange,Expression>(expr);
+		} else SynErr(144);
 		return index;
+	}
+
+	DiscreteRange  discrete_range() {
+		DiscreteRange  discreteRange;
+		Range range = range();
+		discreteRange=new DiscreteRange(new Left<Range, SubTypeIndication>(range));
+		return discreteRange;
 	}
 
 	Expression  expression() {
 		Expression  expr;
 		Tuple2<Position,Operators.Logical> op=null;
 		expr = relation();
-		while (StartOf(14)) {
+		while (StartOf(15)) {
 			op = logical_operator();
 			Expression right = relation();
 			expr=new LogicalExpression(op._1,expr,op._2,right);
@@ -1178,16 +1341,16 @@ public class Parser {
 		blockSpec=null;Either<DiscreteRange,Expression> blockIndex=null;
 		if (scanner.Peek().kind==_LPAREN) {
 			Identifier identifier = identifier();
-			if (la.kind == 119) {
+			if (la.kind == 118) {
 				Get();
 				blockIndex = block_configuration_index();
-				Expect(120);
+				Expect(119);
 			}
 			blockSpec=new BlockConfigurationSpecification(new Right<SelectedName, Tuple2<Identifier, Option<Either<DiscreteRange, Expression>>>>(new Tuple2<Identifier, Option<Either<DiscreteRange, Expression>>>(identifier,toOption(blockIndex))));
 		} else if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
 			SelectedName selectedName = selected_name();
 			blockSpec=new BlockConfigurationSpecification(new Left<SelectedName, Tuple2<Identifier, Option<Either<DiscreteRange, Expression>>>>(selectedName));
-		} else SynErr(146);
+		} else SynErr(145);
 		return blockSpec;
 	}
 
@@ -1196,16 +1359,16 @@ public class Parser {
 		BlockConfiguration blockConfiguration=null;Object indication=null;
 		Expect(37);
 		Object componentSpec = component_specification();
-		if (StartOf(15)) {
+		if (StartOf(16)) {
 			indication = binding_indication();
-			Expect(116);
+			Expect(115);
 		}
 		if (la.kind == 37) {
 			blockConfiguration = block_configuration();
 		}
 		Expect(33);
 		Expect(37);
-		Expect(116);
+		Expect(115);
 		componentConfig=new ComponentConfiguration(componentSpec,toOption(indication),toOption(blockConfiguration));
 		return componentConfig;
 	}
@@ -1213,7 +1376,7 @@ public class Parser {
 	Object  component_specification() {
 		Object  spec;
 		Object list = instantiation_list();
-		Expect(123);
+		Expect(122);
 		SelectedName name = selected_name();
 		spec=null;
 		return spec;
@@ -1238,7 +1401,7 @@ public class Parser {
 	DeclarativeItem  package_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(16))) {SynErr(147); Get();}
+		while (!(StartOf(17))) {SynErr(146); Get();}
 		if (StartOf(9)) {
 			item = subprogram_declaration();
 		} else if (la.kind == 96) {
@@ -1269,14 +1432,14 @@ public class Parser {
 			item = group_template_declaration();
 		} else if (la.kind == 41) {
 			item = group_declaration();
-		} else SynErr(148);
+		} else SynErr(147);
 		return item;
 	}
 
 	DeclarativeItem  subprogram_declaration() {
 		DeclarativeItem  subprogramDecl;
 		subprogramDecl = subprogram_specification();
-		Expect(116);
+		Expect(115);
 		return subprogramDecl;
 	}
 
@@ -1299,7 +1462,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		componentDecl=new ComponentDeclaration(pos,start_identifier,toOption(genericClause),toOption(portClause));
 		return componentDecl;
 	}
@@ -1307,7 +1470,7 @@ public class Parser {
 	DeclarativeItem  package_body_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(17))) {SynErr(149); Get();}
+		while (!(StartOf(18))) {SynErr(148); Get();}
 		if (StartOf(9)) {
 			item = subprogram_declaration_or_body();
 		} else if (la.kind == 96) {
@@ -1332,7 +1495,7 @@ public class Parser {
 			item = group_template_declaration();
 		} else if (la.kind == 41) {
 			item = group_declaration();
-		} else SynErr(150);
+		} else SynErr(149);
 		return item;
 	}
 
@@ -1344,7 +1507,7 @@ public class Parser {
 		} else if (la.kind == 6) {
 			Get();
 			identifier=toIdentifier(t);
-		} else SynErr(151);
+		} else SynErr(150);
 		return identifier;
 	}
 
@@ -1354,10 +1517,10 @@ public class Parser {
 		if (la.kind == 71) {
 			Get();
 			designator = designator();
-			if (la.kind == 119) {
+			if (la.kind == 118) {
 				Get();
 				list = parameter_interface_list_procedure();
-				Expect(120);
+				Expect(119);
 			}
 			decl=new ProcedureDeclaration(pos,designator,toOption(list));
 		} else if (la.kind == 38 || la.kind == 44 || la.kind == 74) {
@@ -1372,15 +1535,15 @@ public class Parser {
 			}
 			Expect(38);
 			designator = designator();
-			if (la.kind == 119) {
+			if (la.kind == 118) {
 				Get();
 				list = parameter_interface_list_function();
-				Expect(120);
+				Expect(119);
 			}
 			Expect(81);
 			SelectedName returnType = type_mark();
 			decl=new FunctionDeclaration(pos,pure,designator,toOption(list),returnType);
-		} else SynErr(152);
+		} else SynErr(151);
 		return decl;
 	}
 
@@ -1391,7 +1554,7 @@ public class Parser {
 		
 		element = interface_element_procedure();
 		elements.append(element);
-		while (la.kind == 116) {
+		while (la.kind == 115) {
 			Get();
 			element = interface_element_procedure();
 			elements.append(element);
@@ -1407,7 +1570,7 @@ public class Parser {
 		
 		element = interface_element_function();
 		elements.append(element);
-		while (la.kind == 116) {
+		while (la.kind == 115) {
 			Get();
 			element = interface_element_function();
 			elements.append(element);
@@ -1457,7 +1620,7 @@ public class Parser {
 	DeclarativeItem  subprogram_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(18))) {SynErr(153); Get();}
+		while (!(StartOf(19))) {SynErr(152); Get();}
 		if (StartOf(9)) {
 			item = subprogram_declaration_or_body();
 		} else if (la.kind == 96) {
@@ -1482,14 +1645,14 @@ public class Parser {
 			item = group_template_declaration();
 		} else if (la.kind == 41) {
 			item = group_declaration();
-		} else SynErr(154);
+		} else SynErr(153);
 		return item;
 	}
 
 	Seq<SequentialStatement>  sequential_statement_list() {
 		Seq<SequentialStatement>  list;
 		MyListBuffer<SequentialStatement> tmpList=new MyListBuffer<SequentialStatement>();
-		while (StartOf(19)) {
+		while (StartOf(20)) {
 			SequentialStatement stmt = sequential_statement();
 			tmpList.append(stmt);
 		}
@@ -1500,7 +1663,7 @@ public class Parser {
 	AbstractTypeDeclaration  type_definition(Identifier id,Position pos) {
 		AbstractTypeDeclaration  typeDef;
 		typeDef=null;
-		if (la.kind == 119) {
+		if (la.kind == 118) {
 			typeDef = enumeration_type_definition(id,pos);
 		} else if (IsPhysicalType()) {
 			typeDef = physical_type_definition(id,pos);
@@ -1518,7 +1681,7 @@ public class Parser {
 			typeDef = protected_type_body(id,pos);
 		} else if (la.kind == 73) {
 			typeDef = protected_type_declaration(id,pos);
-		} else SynErr(155);
+		} else SynErr(154);
 		return typeDef;
 	}
 
@@ -1527,15 +1690,15 @@ public class Parser {
 		MyListBuffer<Identifier> elements=new MyListBuffer<Identifier>(); 
 		Identifier element=null;
 		
-		Expect(119);
+		Expect(118);
 		element = enumeration_literal();
 		elements.append(element);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			element = enumeration_literal();
 			elements.append(element);
 		}
-		Expect(120);
+		Expect(119);
 		enumTypeDef=new EnumerationTypeDefinition(pos,id,elements.toList());
 		return enumTypeDef;
 	}
@@ -1547,12 +1710,12 @@ public class Parser {
 		Range range = range();
 		Expect(98);
 		Identifier baseIdentifier = identifier();
-		Expect(116);
+		Expect(115);
 		while (la.kind == 1 || la.kind == 2) {
 			Identifier identifier = identifier();
-			Expect(130);
+			Expect(129);
 			PhysicalLiteral literal = physical_literal();
-			Expect(116);
+			Expect(115);
 			elements.append(new PhysicalTypeDefinition.Element(identifier,literal));
 		}
 		Expect(33);
@@ -1581,22 +1744,22 @@ public class Parser {
 		
 		Expect(17);
 		if (IsIndexSubtypeDefinition()) {
-			Expect(119);
+			Expect(118);
 			type = index_subtype_definition();
 			unConstraintList.append(type);
-			while (la.kind == 117) {
+			while (la.kind == 116) {
 				Get();
 				type = index_subtype_definition();
 				unConstraintList.append(type);
 			}
-			Expect(120);
+			Expect(119);
 			Expect(62);
 			subType = subtype_indication();
-		} else if (la.kind == 119) {
+		} else if (la.kind == 118) {
 			ranges = index_constraint();
 			Expect(62);
 			subType = subtype_indication();
-		} else SynErr(156);
+		} else SynErr(155);
 		if (unConstraintList.isEmpty()) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,ranges,subType);
 		else arrayTypeDef=new UnconstrainedArrayTypeDefinition(pos,id,unConstraintList.toList(),subType);
 		
@@ -1608,15 +1771,15 @@ public class Parser {
 		MyListBuffer<RecordTypeDefinition.Element> elements=new MyListBuffer<RecordTypeDefinition.Element>(); 
 		Expect(76);
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		SubTypeIndication subType = subtype_indication();
-		Expect(116);
+		Expect(115);
 		elements.append(new RecordTypeDefinition.Element(list, subType));
 		while (la.kind == 1 || la.kind == 2) {
 			list = identifier_list();
-			Expect(123);
+			Expect(122);
 			subType = subtype_indication();
-			Expect(116);
+			Expect(115);
 			elements.append(new RecordTypeDefinition.Element(list, subType));
 		}
 		Expect(33);
@@ -1668,7 +1831,7 @@ public class Parser {
 		ProtectedTypeDeclaration  protectedTypeDecl;
 		MyListBuffer<DeclarativeItem> items=new MyListBuffer<DeclarativeItem>(); 
 		Expect(73);
-		while (StartOf(20)) {
+		while (StartOf(21)) {
 			DeclarativeItem item = protected_type_declarative_item();
 			items.append(item);
 		}
@@ -1688,7 +1851,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
 			n2 = selected_name();
 		}
-		if (la.kind == 75 || la.kind == 119) {
+		if (la.kind == 75 || la.kind == 118) {
 			constraint = constraint();
 		}
 		if (n2!=null) subType=new SubTypeIndication(toOption(n1),n2,toOption(constraint));
@@ -1708,7 +1871,7 @@ public class Parser {
 		} else if (la.kind == 6) {
 			Get();
 			identifier=toIdentifier(t);
-		} else SynErr(157);
+		} else SynErr(156);
 		return identifier;
 	}
 
@@ -1716,6 +1879,10 @@ public class Parser {
 		Name  name;
 		MyListBuffer<Name.Part> parts=new MyListBuffer<Name.Part>();
 		Identifier prefix = name_prefix();
+		while (StartOf(22)) {
+			Name.Part part = name_part();
+			parts.append(part);
+		}
 		name =new Name(prefix,parts.toList());
 		return name;
 	}
@@ -1723,7 +1890,7 @@ public class Parser {
 	Signature  signature() {
 		Signature  signature;
 		Seq<SelectedName> list=null;SelectedName returnType=null;
-		Expect(121);
+		Expect(120);
 		if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
 			list = selected_name_list();
 		}
@@ -1731,7 +1898,7 @@ public class Parser {
 			Get();
 			returnType = type_mark();
 		}
-		Expect(122);
+		Expect(121);
 		signature =new Signature(toOption(list),toOption(returnType));
 		return signature;
 	}
@@ -1742,10 +1909,10 @@ public class Parser {
 		Tuple2<Identifier,Option<Signature>> designator=null;
 		list=null;
 		
-		if (StartOf(21)) {
+		if (StartOf(23)) {
 			designator = entity_designator();
 			elements.append(designator); 
-			while (la.kind == 117) {
+			while (la.kind == 116) {
 				Get();
 				designator = entity_designator();
 				elements.append(designator);
@@ -1757,7 +1924,7 @@ public class Parser {
 		} else if (la.kind == 14) {
 			Get();
 			list=new Right<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>(toIdentifier(t));
-		} else SynErr(158);
+		} else SynErr(157);
 		return list;
 	}
 
@@ -1850,7 +2017,7 @@ public class Parser {
 			entityClass=EntityClass.GROUP;
 			break;
 		}
-		default: SynErr(159); break;
+		default: SynErr(158); break;
 		}
 		return entityClass;
 	}
@@ -1866,8 +2033,8 @@ public class Parser {
 		} else if (la.kind == 6) {
 			Get();
 			identifier=toIdentifier(t);
-		} else SynErr(160);
-		if (la.kind == 121) {
+		} else SynErr(159);
+		if (la.kind == 120) {
 			signature = signature();
 		}
 		designator=new Tuple2<Identifier,Option<Signature>>(identifier,toOption(signature)); 
@@ -1880,7 +2047,7 @@ public class Parser {
 		Expect(37);
 		Object componentSpec = component_specification();
 		Object indication = binding_indication();
-		Expect(116);
+		Expect(115);
 		configSpec= new ConfigurationSpecification(pos);
 		return configSpec;
 	}
@@ -1897,7 +2064,7 @@ public class Parser {
 		} else if (la.kind == 14) {
 			Get();
 			list=new Right<Seq<Identifier>,Identifier>(toIdentifier(t));
-		} else SynErr(161);
+		} else SynErr(160);
 		return list;
 	}
 
@@ -1905,26 +2072,26 @@ public class Parser {
 		if (la.kind == 34) {
 			Get();
 			SelectedName entity_name = selected_name();
-			if (la.kind == 119) {
+			if (la.kind == 118) {
 				Get();
 				Identifier architecture_identifier = identifier();
-				Expect(120);
+				Expect(119);
 			}
 		} else if (la.kind == 27) {
 			Get();
 			SelectedName configuration_name = selected_name();
 		} else if (la.kind == 64) {
 			Get();
-		} else SynErr(162);
+		} else SynErr(161);
 	}
 
 	AssociationList  generic_map_aspect() {
 		AssociationList  associationList;
 		Expect(40);
 		Expect(54);
-		Expect(119);
+		Expect(118);
 		associationList = association_list();
-		Expect(120);
+		Expect(119);
 		return associationList;
 	}
 
@@ -1932,9 +2099,9 @@ public class Parser {
 		AssociationList  associationList;
 		Expect(69);
 		Expect(54);
-		Expect(119);
+		Expect(118);
 		associationList = association_list();
-		Expect(120);
+		Expect(119);
 		return associationList;
 	}
 
@@ -1945,7 +2112,7 @@ public class Parser {
 		
 		name = selected_name();
 		tmpList.append(name);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			name = selected_name();
 			tmpList.append(name);
@@ -1973,7 +2140,7 @@ public class Parser {
 		
 		element = group_constituent();
 		elements.append(element); 
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			element = group_constituent();
 			elements.append(element);
@@ -1991,7 +2158,7 @@ public class Parser {
 		} else if (la.kind == 8) {
 			Get();
 			constituent=new Right<Name,Identifier>(toIdentifier(t));
-		} else SynErr(163);
+		} else SynErr(162);
 		return constituent;
 	}
 
@@ -2003,7 +2170,7 @@ public class Parser {
 		} else if (la.kind == 8) {
 			Get();
 			identifier=toIdentifier(t);
-		} else SynErr(164);
+		} else SynErr(163);
 		return identifier;
 	}
 
@@ -2028,7 +2195,7 @@ public class Parser {
 		} else if (la.kind == 5) {
 			Get();
 			literalType=LiteralType.REAL_LITERAL;
-		} else SynErr(165);
+		} else SynErr(164);
 		Identifier unit_name = identifier();
 		literal =new PhysicalLiteral(pos,text,unit_name,literalType);
 		return literal;
@@ -2047,15 +2214,15 @@ public class Parser {
 		MyListBuffer<DiscreteRange> list=new MyListBuffer<DiscreteRange>();
 		DiscreteRange discreteRange=null;
 		
-		Expect(119);
+		Expect(118);
 		discreteRange = discrete_range();
 		list.append(discreteRange);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			discreteRange = discrete_range();
 			list.append(discreteRange);
 		}
-		Expect(120);
+		Expect(119);
 		ranges = list.toList();
 		return ranges;
 	}
@@ -2063,21 +2230,21 @@ public class Parser {
 	DeclarativeItem  protected_type_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(22))) {SynErr(166); Get();}
+		while (!(StartOf(24))) {SynErr(165); Get();}
 		if (StartOf(9)) {
 			item = subprogram_declaration();
 		} else if (la.kind == 19) {
 			item = attribute_specification();
 		} else if (la.kind == 100) {
 			item = use_clause();
-		} else SynErr(167);
+		} else SynErr(166);
 		return item;
 	}
 
 	DeclarativeItem  protected_type_body_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(18))) {SynErr(168); Get();}
+		while (!(StartOf(19))) {SynErr(167); Get();}
 		if (StartOf(9)) {
 			item = subprogram_declaration_or_body();
 		} else if (la.kind == 96) {
@@ -2102,7 +2269,7 @@ public class Parser {
 			item = group_template_declaration();
 		} else if (la.kind == 41) {
 			item = group_declaration();
-		} else SynErr(169);
+		} else SynErr(168);
 		return item;
 	}
 
@@ -2112,10 +2279,10 @@ public class Parser {
 		if (la.kind == 75) {
 			Range rangeContraint = range_constraint();
 			constraint = new Left<Range,Seq<DiscreteRange>>(rangeContraint);
-		} else if (la.kind == 119) {
+		} else if (la.kind == 118) {
 			Seq<DiscreteRange> ranges = index_constraint();
 			constraint = new Right<Range,Seq<DiscreteRange>>(ranges);
-		} else SynErr(170);
+		} else SynErr(169);
 		return constraint;
 	}
 
@@ -2128,7 +2295,7 @@ public class Parser {
 		} else if (la.kind == 30) {
 			Get();
 			rangeDirection=Direction.Downto;
-		} else SynErr(171);
+		} else SynErr(170);
 		return rangeDirection;
 	}
 
@@ -2139,22 +2306,15 @@ public class Parser {
 		return rangeContraint;
 	}
 
-	DiscreteRange  discrete_range() {
-		DiscreteRange  discreteRange;
-		Range range = range();
-		discreteRange=new DiscreteRange(new Left<Range, SubTypeIndication>(range));
-		return discreteRange;
-	}
-
 	Expression  simple_expression() {
 		Expression  simpleExpr;
 		Tuple2<Position,Operators.Sign> sign=null;Tuple2<Position,Operators.Add> op=null;
-		if (la.kind == 126 || la.kind == 127) {
+		if (la.kind == 125 || la.kind == 126) {
 			sign = sign();
 		}
 		simpleExpr = term();
 		if (sign!=null) simpleExpr=new SimpleExpression(sign._1,sign._2,simpleExpr);
-		while (la.kind == 118 || la.kind == 126 || la.kind == 127) {
+		while (la.kind == 117 || la.kind == 125 || la.kind == 126) {
 			op = adding_operator();
 			Expression right = term();
 			simpleExpr=new SimpleExpression(op._1,simpleExpr,op._2,right);
@@ -2167,8 +2327,11 @@ public class Parser {
 		concurrentStmt=null; Identifier label=null;
 		if (scanner.Peek().kind==_COLON) {
 			label = label_colon();
-			concurrentStmt = architecture_statement_with_label(label);
-			concurrentStmt = architecture_statement_optional_label(label);
+			if (IsArchitecutreStatementWithLabel()) {
+				concurrentStmt = architecture_statement_with_label(label);
+			} else if (StartOf(12)) {
+				concurrentStmt = architecture_statement_optional_label(label);
+			} else SynErr(171);
 		} else if (StartOf(12)) {
 			concurrentStmt = architecture_statement_optional_label(label);
 		} else SynErr(172);
@@ -2178,7 +2341,7 @@ public class Parser {
 	ConcurrentStatement  architecture_statement_with_label(Identifier label) {
 		ConcurrentStatement  concurrentStmt;
 		concurrentStmt=null;
-		if (la.kind == 26 || la.kind == 27 || la.kind == 34) {
+		if (StartOf(25)) {
 			concurrentStmt = component_instantiation_statement(label);
 		} else if (la.kind == 21) {
 			concurrentStmt = block_statement(label);
@@ -2199,7 +2362,7 @@ public class Parser {
 			concurrentStmt = process_statement(label,postponed);
 		} else if (la.kind == 18) {
 			concurrentStmt = concurrent_assertion_statement(label,postponed);
-		} else if (IsConcurrentSignalSssignmentStatement()) {
+		} else if (IsConcurrentSignalAssignmentStatement()) {
 			concurrentStmt = concurrent_signal_assignment_statement(label,postponed);
 		} else if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
 			concurrentStmt = concurrent_procedure_call_statement(label,postponed);
@@ -2215,17 +2378,19 @@ public class Parser {
 		SelectedName name=null;
 		Identifier architecture=null;
 		
-		if (la.kind == 26) {
-			Get();
+		if (StartOf(26)) {
+			if (la.kind == 26) {
+				Get();
+			}
 			name = selected_name();
 			componentType=ComponentType.COMPONENT;
 		} else if (la.kind == 34) {
 			Get();
 			name = selected_name();
-			if (la.kind == 119) {
+			if (la.kind == 118) {
 				Get();
 				architecture = identifier();
-				Expect(120);
+				Expect(119);
 			}
 			componentType=ComponentType.ENTITY;
 		} else if (la.kind == 27) {
@@ -2239,7 +2404,7 @@ public class Parser {
 		if (la.kind == 69) {
 			portMap = port_map_aspect();
 		}
-		Expect(116);
+		Expect(115);
 		stmt=new ComponentInstantiationStatement(pos,label,componentType,name,toOption(architecture),toOption(genericMap),toOption(portMap));
 		return stmt;
 	}
@@ -2253,10 +2418,10 @@ public class Parser {
 		AssociationList genericMap=null,portMap=null;
 		
 		Expect(21);
-		if (la.kind == 119) {
+		if (la.kind == 118) {
 			Get();
 			guard_expression = expression();
-			Expect(120);
+			Expect(119);
 		}
 		if (la.kind == 48) {
 			Get();
@@ -2265,14 +2430,14 @@ public class Parser {
 			genericClause = generic_clause();
 			if (la.kind == 40) {
 				genericMap = generic_map_aspect();
-				Expect(116);
+				Expect(115);
 			}
 		}
 		if (la.kind == 69) {
 			portClause = port_clause();
 			if (la.kind == 69) {
 				portMap = port_map_aspect();
-				Expect(116);
+				Expect(115);
 			}
 		}
 		while (StartOf(4)) {
@@ -2286,7 +2451,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		blockStmt=new BlockStatement(pos,toOption(label),toOption(guard_expression),toOption(genericClause),toOption(genericMap),toOption(portClause),toOption(portMap),declarativeItems.toList(),statementList);
 		return blockStmt;
 	}
@@ -2305,7 +2470,7 @@ public class Parser {
 	ConcurrentSignalAssignmentStatement  concurrent_signal_assignment_statement(Identifier label,boolean postponed) {
 		ConcurrentSignalAssignmentStatement  signalAssignmentStatement;
 		signalAssignmentStatement=null;
-		if (StartOf(23)) {
+		if (StartOf(27)) {
 			signalAssignmentStatement = conditional_signal_assignment(label,postponed);
 		} else if (la.kind == 105) {
 			signalAssignmentStatement = selected_signal_assignment(label,postponed);
@@ -2320,7 +2485,7 @@ public class Parser {
 		
 		element = association_element();
 		elements.append(element);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			element = association_element();
 			elements.append(element);
@@ -2334,7 +2499,7 @@ public class Parser {
 		MyListBuffer<Name> tmpList=new MyListBuffer<Name>();
 		Name name = name();
 		tmpList.append(name);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			name = name();
 			tmpList.append(name);
@@ -2346,7 +2511,7 @@ public class Parser {
 	DeclarativeItem  process_declarative_item() {
 		DeclarativeItem  item;
 		item=null;
-		while (!(StartOf(18))) {SynErr(178); Get();}
+		while (!(StartOf(19))) {SynErr(178); Get();}
 		if (StartOf(9)) {
 			item = subprogram_declaration_or_body();
 		} else if (la.kind == 96) {
@@ -2398,7 +2563,7 @@ public class Parser {
 			delay = delay_mechanism();
 		}
 		conditional_waveforms(elements);
-		Expect(116);
+		Expect(115);
 		signalAssignment=new ConcurrentConditionalSignalAssignment(pos,toOption(label),postponed,target,guarded,toOption(delay),elements.toList());
 		return signalAssignment;
 	}
@@ -2425,12 +2590,12 @@ public class Parser {
 		}
 		when = selected_waveform();
 		elements.append(when);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			when = selected_waveform();
 			elements.append(when);
 		}
-		Expect(116);
+		Expect(115);
 		signalAssignment=new ConcurrentSelectedSignalAssignment(pos,toOption(label),postponed,expr,target,guarded,toOption(delay),elements.toList());
 		return signalAssignment;
 	}
@@ -2441,7 +2606,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
 			Name name = name();
 			target = new Target(new Left<Name, Aggregate>(name));
-		} else if (la.kind == 119) {
+		} else if (la.kind == 118) {
 			Aggregate aggregate = aggregate();
 			target = new Target(new Right<Name, Aggregate>(aggregate));
 		} else SynErr(180);
@@ -2483,10 +2648,10 @@ public class Parser {
 	Waveform  waveform() {
 		Waveform  waveForm;
 		MyListBuffer<Waveform.Element> elements=new MyListBuffer<Waveform.Element>();
-		if (StartOf(24)) {
+		if (StartOf(14)) {
 			Waveform.Element element = waveform_element();
 			elements.append(element);
-			while (la.kind == 117) {
+			while (la.kind == 116) {
 				Get();
 				element = waveform_element();
 				elements.append(element);
@@ -2512,7 +2677,7 @@ public class Parser {
 		MyListBuffer<Choices.Choice> elements=new MyListBuffer<Choices.Choice>(); 
 		Choices.Choice choice = choice();
 		elements.append(choice);
-		while (la.kind == 131) {
+		while (la.kind == 130) {
 			Get();
 			choice = choice();
 			elements.append(choice);
@@ -2524,15 +2689,15 @@ public class Parser {
 	Aggregate  aggregate() {
 		Aggregate  aggregate;
 		MyListBuffer<Aggregate.ElementAssociation> elements=new MyListBuffer<Aggregate.ElementAssociation>(); 
-		Expect(119);
+		Expect(118);
 		Aggregate.ElementAssociation element = element_association();
 		elements.append(element);
-		while (la.kind == 117) {
+		while (la.kind == 116) {
 			Get();
 			element = element_association();
 			elements.append(element);
 		}
-		Expect(120);
+		Expect(119);
 		aggregate =new Aggregate(elements.toList());
 		return aggregate;
 	}
@@ -2551,7 +2716,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		forGenerateStmt=new ForGenerateStatement(pos,toOption(label),loopIdentifier,discreteRange,body._1,body._2);
 		return forGenerateStmt;
 	}
@@ -2568,7 +2733,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		ifGenerateStmt=new IfGenerateStatement(pos,toOption(label),expr,body._1,body._2);
 		return ifGenerateStmt;
 	}
@@ -2576,7 +2741,7 @@ public class Parser {
 	Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>  generate_statement_body() {
 		Tuple2<Seq<DeclarativeItem>,Seq<ConcurrentStatement>>  statementList;
 		MyListBuffer<DeclarativeItem> declarativeItems=new MyListBuffer<DeclarativeItem>();
-		if (StartOf(25)) {
+		if (StartOf(28)) {
 			while (StartOf(4)) {
 				DeclarativeItem item = block_declarative_item();
 				declarativeItems.append(item);
@@ -2595,7 +2760,7 @@ public class Parser {
 		if (scanner.Peek().kind==_COLON) {
 			label = label_colon();
 		}
-		while (!(StartOf(26))) {SynErr(183); Get();}
+		while (!(StartOf(29))) {SynErr(183); Get();}
 		if (la.kind == 102) {
 			sequentialStatement = wait_statement(label);
 		} else if (la.kind == 18) {
@@ -2640,7 +2805,7 @@ public class Parser {
 			Get();
 			forExpression = expression();
 		}
-		Expect(116);
+		Expect(115);
 		waitStmt=new WaitStatement(pos,toOption(label),toOption(name_list),toOption(untilExpr),toOption(forExpression));
 		return waitStmt;
 	}
@@ -2658,7 +2823,7 @@ public class Parser {
 			Get();
 			severity_expression = expression();
 		}
-		Expect(116);
+		Expect(115);
 		assertStmt=new AssertStatement(pos,toOption(label),expr,toOption(report_expression),toOption(severity_expression));
 		return assertStmt;
 	}
@@ -2672,7 +2837,7 @@ public class Parser {
 			Get();
 			severity_expression = expression();
 		}
-		Expect(116);
+		Expect(115);
 		reportStmt=new ReportStatement(pos,toOption(label),report_expression,toOption(severity_expression));
 		return reportStmt;
 	}
@@ -2705,7 +2870,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		ifStmt=new IfStatement(pos,toOption(label),ifList.toList(),toOption(else_sequential_statement));
 		return ifStmt;
 	}
@@ -2735,7 +2900,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		caseStmt=new CaseStatement(pos,toOption(label),expr,alternatives.toList());
 		return caseStmt;
 	}
@@ -2753,7 +2918,7 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2) {
 			unused_identifier();
 		}
-		Expect(116);
+		Expect(115);
 		if (stmtType!=null){
 		if (stmtType instanceof Left) loopStmt=new WhileStatement(pos,toOption(label),((Left<Expression,Tuple2<Identifier,DiscreteRange>>)stmtType).a,sequentialStatements);
 		else {
@@ -2776,7 +2941,7 @@ public class Parser {
 			Get();
 			expr = condition();
 		}
-		Expect(116);
+		Expect(115);
 		nextStmt=new NextStatement(pos,toOption(label),toOption(identifier),toOption(expr));
 		return nextStmt;
 	}
@@ -2792,7 +2957,7 @@ public class Parser {
 			Get();
 			expr = condition();
 		}
-		Expect(116);
+		Expect(115);
 		exitStmt=new ExitStatement(pos,toOption(label),toOption(identifier),toOption(expr));
 		return exitStmt;
 	}
@@ -2801,10 +2966,10 @@ public class Parser {
 		ReturnStatement  returnStmt;
 		Position pos=toPosition(la);Expression expr=null;
 		Expect(81);
-		if (StartOf(24)) {
+		if (StartOf(14)) {
 			expr = expression();
 		}
-		Expect(116);
+		Expect(115);
 		returnStmt=new ReturnStatement(pos,toOption(label),toOption(expr));
 		return returnStmt;
 	}
@@ -2813,7 +2978,7 @@ public class Parser {
 		NullStatement  nullStmt;
 		Position pos=toPosition(la);
 		Expect(61);
-		Expect(116);
+		Expect(115);
 		nullStmt=new NullStatement(pos,toOption(label));
 		return nullStmt;
 	}
@@ -2834,12 +2999,12 @@ public class Parser {
 		ProcedureCallStatement  procedureCallStmt;
 		AssociationList paramterList=null;
 		SelectedName procedure_name = selected_name();
-		if (la.kind == 119) {
+		if (la.kind == 118) {
 			Get();
 			paramterList = association_list();
-			Expect(120);
+			Expect(119);
 		}
-		Expect(116);
+		Expect(115);
 		procedureCallStmt=new ProcedureCallStatement(toOption(label),procedure_name,toOption(paramterList));
 		return procedureCallStmt;
 	}
@@ -2853,7 +3018,7 @@ public class Parser {
 			delay = delay_mechanism();
 		}
 		Waveform waveform = waveform();
-		Expect(116);
+		Expect(115);
 		signalAssignStmt=new SimpleSignalAssignmentStatement(pos,toOption(label),target,toOption(delay),waveform);
 		return signalAssignStmt;
 	}
@@ -2863,7 +3028,7 @@ public class Parser {
 		Expect(113);
 		Position pos=toPosition(t);
 		Expression expr = expression();
-		Expect(116);
+		Expect(115);
 		varAssignStmt=new SimpleVariableAssignmentStatement(pos,toOption(label),target,expr);
 		return varAssignStmt;
 	}
@@ -2919,7 +3084,7 @@ public class Parser {
 			Get();
 		}
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		if (StartOf(7)) {
 			mode = interface_mode();
 		}
@@ -2936,7 +3101,7 @@ public class Parser {
 		InterfaceList.InterfaceFileDeclaration  fileElement;
 		Expect(36);
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		SubTypeIndication subType = subtype_indication();
 		fileElement=new InterfaceList.InterfaceFileDeclaration(list,subType);
 		return fileElement;
@@ -2960,7 +3125,7 @@ public class Parser {
 		Expression expr=null;boolean bus=false;
 		Expect(87);
 		Seq<Identifier> list = identifier_list();
-		Expect(123);
+		Expect(122);
 		if (la.kind == 45) {
 			Get();
 		}
@@ -3002,7 +3167,7 @@ public class Parser {
 	AssociationList.Element  association_element() {
 		AssociationList.Element  element;
 		Identifier identifier=null;Name name=null;Option<Expression> actualPart=null;
-		if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
+		if (IsFormalPartInAssociationElement()) {
 			name = formal_part();
 			Expect(111);
 		}
@@ -3020,7 +3185,7 @@ public class Parser {
 	Option<Expression>  actual_part() {
 		Option<Expression>  actual_part;
 		Expression expr=null;
-		if (StartOf(24)) {
+		if (StartOf(14)) {
 			expr = expression();
 		} else if (la.kind == 64) {
 			Get();
@@ -3033,7 +3198,7 @@ public class Parser {
 		Expression  rel;
 		Tuple2<Position,Operators.Relation> op=null;
 		rel = shift_expression();
-		if (StartOf(27)) {
+		if (StartOf(30)) {
 			op = relational_operator();
 			Expression right = shift_expression();
 			rel=new Relation(op._1,rel,op._2,right);
@@ -3087,7 +3252,7 @@ public class Parser {
 		Expression  shiftExpr;
 		Tuple2<Position,Operators.Shift> op=null;
 		shiftExpr = simple_expression();
-		if (StartOf(28)) {
+		if (StartOf(31)) {
 			op = shift_operator();
 			Expression right = simple_expression();
 			shiftExpr=new ShiftExpression(op._1,shiftExpr,op._2,right);
@@ -3101,7 +3266,7 @@ public class Parser {
 		Operators.Relation relOp=null;
 		
 		switch (la.kind) {
-		case 130: {
+		case 129: {
 			Get();
 			relOp=Operators.Relation.EQ;
 			break;
@@ -3111,7 +3276,7 @@ public class Parser {
 			relOp=Operators.Relation.NEQ;
 			break;
 		}
-		case 128: {
+		case 127: {
 			Get();
 			relOp=Operators.Relation.LT;
 			break;
@@ -3121,7 +3286,7 @@ public class Parser {
 			relOp=Operators.Relation.LEQ;
 			break;
 		}
-		case 129: {
+		case 128: {
 			Get();
 			relOp=Operators.Relation.GT;
 			break;
@@ -3184,10 +3349,10 @@ public class Parser {
 		Position pos=toPosition(la);
 		Operators.Sign signOp=null;
 		
-		if (la.kind == 126) {
+		if (la.kind == 125) {
 			Get();
 			signOp=Operators.Sign.PLUS;
-		} else if (la.kind == 127) {
+		} else if (la.kind == 126) {
 			Get();
 			signOp=Operators.Sign.MINUS;
 		} else SynErr(194);
@@ -3199,7 +3364,7 @@ public class Parser {
 		Expression  term;
 		Tuple2<Position,Operators.Term> op=null;
 		term = factor();
-		if (StartOf(29)) {
+		if (StartOf(32)) {
 			op = multiplying_operator();
 			Expression right = factor();
 			term = new Term(op._1,term,op._2,right);
@@ -3212,13 +3377,13 @@ public class Parser {
 		Position pos=toPosition(la);
 		Operators.Add addOp=null;
 		
-		if (la.kind == 126) {
+		if (la.kind == 125) {
 			Get();
 			addOp=Operators.Add.PLUS;
-		} else if (la.kind == 127) {
+		} else if (la.kind == 126) {
 			Get();
 			addOp=Operators.Add.MINUS;
-		} else if (la.kind == 118) {
+		} else if (la.kind == 117) {
 			Get();
 			addOp=Operators.Add.AMPERSAND;
 		} else SynErr(195);
@@ -3231,10 +3396,10 @@ public class Parser {
 		Position pos=toPosition(la);
 		Operators.Term mulOp=null;
 		
-		if (la.kind == 124) {
+		if (la.kind == 123) {
 			Get();
 			mulOp=Operators.Term.MUL;
-		} else if (la.kind == 125) {
+		} else if (la.kind == 124) {
 			Get();
 			mulOp=Operators.Term.DIV;
 		} else if (la.kind == 55) {
@@ -3251,7 +3416,7 @@ public class Parser {
 	Expression  factor() {
 		Expression  factor;
 		factor=null;
-		if (StartOf(30)) {
+		if (StartOf(33)) {
 			factor = primary();
 			if (la.kind == 108) {
 				Get();
@@ -3279,11 +3444,11 @@ public class Parser {
 		if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
 			Name name = name();
 			expr=new NameExpression(name);
-		} else if (StartOf(31)) {
+		} else if (StartOf(34)) {
 			expr = literal();
 		} else if (la.kind == 57) {
 			expr = allocator();
-		} else if (la.kind == 119) {
+		} else if (la.kind == 118) {
 			Aggregate aggregate = aggregate();
 			expr=new AggregateExpression(aggregate);
 		} else SynErr(198);
@@ -3342,8 +3507,8 @@ public class Parser {
 		if (la.kind == 9) {
 			Expression expr = qualified_expression(selectedName);
 			newExpression=new NewExpression(pos,new Left<Expression, SubTypeIndication>(expr));
-		} else if (StartOf(32)) {
-			if (la.kind == 119) {
+		} else if (StartOf(35)) {
+			if (la.kind == 118) {
 				Seq<DiscreteRange> ranges = index_constraint();
 				Either<Range,Seq<DiscreteRange>> constraint=new Right<Range,Seq<DiscreteRange>>(ranges);
 				newExpression=new NewExpression(pos,new Right<Expression, SubTypeIndication>(new SubTypeIndication(selectedName,toOption(constraint))));
@@ -3361,19 +3526,6 @@ public class Parser {
 		return expr;
 	}
 
-	FunctionCallExpression  function_call() {
-		FunctionCallExpression  functionCall;
-		AssociationList parameter_association_list=null;
-		SelectedName function_name = selected_name();
-		if (la.kind == 119) {
-			Get();
-			parameter_association_list = association_list();
-			Expect(120);
-		}
-		functionCall=new FunctionCallExpression(function_name,toOption(parameter_association_list));
-		return functionCall;
-	}
-
 	Identifier  name_prefix() {
 		Identifier  identifier;
 		identifier=null;
@@ -3389,7 +3541,7 @@ public class Parser {
 	Name.SelectedPart  name_selected_part() {
 		Name.SelectedPart  part;
 		part=null;
-		Expect(132);
+		Expect(131);
 		if (la.kind == 1 || la.kind == 2) {
 			Identifier identifier = identifier();
 			part= new Name.SelectedPart(identifier);
@@ -3409,12 +3561,14 @@ public class Parser {
 	Name.Part  name_part() {
 		Name.Part  part;
 		part=null;
-		if (la.kind == 132) {
+		if (la.kind == 131) {
 			part = name_selected_part();
-		} else if (la.kind == 9 || la.kind == 121) {
+		} else if (la.kind == 9 || la.kind == 120) {
 			part = name_attribute_part();
-		} else if (la.kind == 119) {
+		} else if (IsNameSlicePart()) {
 			part = name_slice_part();
+		} else if (la.kind == 118) {
+			part = name_association_list_part();
 		} else SynErr(203);
 		return part;
 	}
@@ -3422,7 +3576,7 @@ public class Parser {
 	Name.AttributePart  name_attribute_part() {
 		Name.AttributePart  part;
 		Signature signature=null;Identifier identifier=null;Expression expr=null;
-		if (la.kind == 121) {
+		if (la.kind == 120) {
 			signature = signature();
 		}
 		Expect(9);
@@ -3432,10 +3586,10 @@ public class Parser {
 			Get();
 			identifier=toIdentifier(t);
 		} else SynErr(204);
-		if (la.kind == 119) {
+		if (la.kind == 118) {
 			Get();
 			expr = expression();
-			Expect(120);
+			Expect(119);
 		}
 		part=new Name.AttributePart(toOption(signature),identifier,toOption(expr));
 		return part;
@@ -3443,32 +3597,29 @@ public class Parser {
 
 	Name.SlicePart  name_slice_part() {
 		Name.SlicePart  part;
-		Expect(119);
+		Expect(118);
 		DiscreteRange discreteRange = discrete_range();
-		Expect(120);
+		Expect(119);
 		part=new Name.SlicePart(discreteRange);
 		return part;
 	}
 
-	Name.IndexPart  name_indexed_part() {
-		Name.IndexPart  part;
-		MyListBuffer<Expression> indexes=new MyListBuffer<Expression>(); 
+	Name.AssociationListPart  name_association_list_part() {
+		Name.AssociationListPart  part;
+		Expect(118);
+		AssociationList list = association_list();
 		Expect(119);
-		Expression expr = expression();
-		indexes.append(expr);
-		while (la.kind == 117) {
-			Get();
-			expr = expression();
-			indexes.append(expr);
-		}
-		Expect(120);
-		part=new Name.IndexPart(indexes.toList());
+		part=new Name.AssociationListPart(list);
 		return part;
 	}
 
 	Aggregate.ElementAssociation  element_association() {
 		Aggregate.ElementAssociation  element;
 		Choices choice=null;
+		if (IsChoiceInElementAssociation()) {
+			choice = choices();
+			Expect(111);
+		}
 		Expression expr = expression();
 		element=new Aggregate.ElementAssociation(toOption(choice),expr);
 		return element;
@@ -3476,8 +3627,17 @@ public class Parser {
 
 	Choices.Choice  choice() {
 		Choices.Choice  choice;
-		Expect(133);
 		choice=null;
+		if (IsRangeInChoice()) {
+			DiscreteRange range = discrete_range();
+			Either<DiscreteRange, Expression> left=new Left<DiscreteRange, Expression>(range);choice =new Choices.Choice(toOption(left));
+		} else if (StartOf(14)) {
+			Expression expr = simple_expression();
+			Either<DiscreteRange, Expression> right=new Right<DiscreteRange, Expression>(expr);choice = new Choices.Choice(toOption(right));
+		} else if (la.kind == 66) {
+			Get();
+			choice =new Choices.Choice();
+		} else SynErr(205);
 		return choice;
 	}
 
@@ -3493,39 +3653,42 @@ public class Parser {
 	}
 
 	private static final boolean[][] set = {
-		{T,T,T,x, x,x,T,x, x,x,x,x, x,T,x,x, x,x,T,T, x,x,x,x, x,T,T,x, T,T,x,x, x,x,x,T, T,T,T,x, x,T,x,T, T,x,x,x, x,x,x,x, x,T,x,x, x,x,T,x, x,T,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, T,T,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,T,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,T, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,T,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,T, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,T, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,T,x,x, x,x,T,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,T,T,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,T,T,T, T,T,T,T, T,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,T,T, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, T,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,T,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{T,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,T, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,T,x,x, x,x,T,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,T,T,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,T,T,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x},
-		{x,T,T,T, T,T,T,T, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,T, T,T,x,T, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x},
-		{x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,T,T, x,x,x,x, x,T,x,T, x,x,x,x, x,x,T,x, T,x,x,x, x,T,x,T, T,x,x,T, x,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,T,x,T, T,x,T,T, T,T,x,x, T,T,T,T, x,T,T,x, x,x,T,x, x,x,x,T, x,x,T,T, T,T,T,x, T,T,x,x, T,T,T,T, T,x,x,x, T,T,T,T, T,T,T,x, x,x,x,x}
+		{T,T,T,x, x,x,T,x, x,x,x,x, x,T,x,x, x,x,T,T, x,x,x,x, x,T,T,x, T,T,x,x, x,x,x,T, T,T,T,x, x,T,x,T, T,x,x,x, x,x,x,x, x,T,x,x, x,x,T,x, x,T,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, T,T,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,T,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,T, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,T,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,T,T,T, T,T,T,T, T,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,T,T,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,T, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, T,x,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,T, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,T,x,x, x,x,T,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,T, x,x},
+		{x,T,T,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,T, T,x,x,x, x,x,T,x, T,T,x,x, x,x,x,x, T,T,T,x, x,T,x,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,x,x,x, T,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{T,T,T,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,T, x,T,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,T,x,x, x,x,T,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,T,x, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, T,T,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,T, x,x,x,x, T,T,T,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,T, T,x,x,x, x,x,x,x, x,x},
+		{x,T,T,T, T,T,T,T, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,T,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,T, T,T,x,T, T,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,T,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x, x,x},
+		{x,x,x,x, x,x,x,x, x,x,x,x, T,x,x,T, x,x,x,x, x,x,x,x, T,x,x,x, x,x,T,T, x,x,x,x, x,T,x,T, x,x,x,x, x,x,T,x, T,x,x,x, x,T,x,T, T,x,x,T, x,x,x,x, T,T,x,x, x,x,x,x, x,x,x,x, x,T,x,T, T,x,T,T, T,T,x,x, T,T,T,T, x,T,T,x, x,x,T,x, x,x,x,T, x,x,T,T, T,T,T,T, T,T,x,T, T,T,T,T, x,x,x,T, T,T,T,T, T,T,T,x, x,x}
 
 	};
 } // end Parser
@@ -3665,63 +3828,63 @@ class Errors {
 			case 112: s = "NEQ expected"; break;
 			case 113: s = "VAR_ASSIGN expected"; break;
 			case 114: s = "BOX expected"; break;
-			case 115: s = "DBLQUOTE expected"; break;
-			case 116: s = "SEMICOLON expected"; break;
-			case 117: s = "COMMA expected"; break;
-			case 118: s = "AMPERSAND expected"; break;
-			case 119: s = "LPAREN expected"; break;
-			case 120: s = "RPAREN expected"; break;
-			case 121: s = "LBRACKET expected"; break;
-			case 122: s = "RBRACKET expected"; break;
-			case 123: s = "COLON expected"; break;
-			case 124: s = "MUL expected"; break;
-			case 125: s = "DIV expected"; break;
-			case 126: s = "PLUS expected"; break;
-			case 127: s = "MINUS expected"; break;
-			case 128: s = "LT expected"; break;
-			case 129: s = "GT expected"; break;
-			case 130: s = "EQ expected"; break;
-			case 131: s = "BAR expected"; break;
-			case 132: s = "DOT expected"; break;
-			case 133: s = "\"jlskdjf\u00f6ks\" expected"; break;
-			case 134: s = "??? expected"; break;
-			case 135: s = "invalid library_unit"; break;
-			case 136: s = "invalid entity_declaration"; break;
-			case 137: s = "invalid identifier"; break;
-			case 138: s = "this symbol not expected in entity_declarative_item"; break;
-			case 139: s = "invalid entity_declarative_item"; break;
-			case 140: s = "invalid type_declaration"; break;
-			case 141: s = "invalid disconnection_specification"; break;
-			case 142: s = "this symbol not expected in block_declarative_item"; break;
-			case 143: s = "invalid block_declarative_item"; break;
-			case 144: s = "this symbol not expected in configuration_declarative_item"; break;
-			case 145: s = "invalid configuration_declarative_item"; break;
-			case 146: s = "invalid block_specification"; break;
-			case 147: s = "this symbol not expected in package_declarative_item"; break;
-			case 148: s = "invalid package_declarative_item"; break;
-			case 149: s = "this symbol not expected in package_body_declarative_item"; break;
-			case 150: s = "invalid package_body_declarative_item"; break;
-			case 151: s = "invalid designator"; break;
-			case 152: s = "invalid subprogram_specification"; break;
-			case 153: s = "this symbol not expected in subprogram_declarative_item"; break;
-			case 154: s = "invalid subprogram_declarative_item"; break;
-			case 155: s = "invalid type_definition"; break;
-			case 156: s = "invalid array_type_definition"; break;
-			case 157: s = "invalid alias_designator"; break;
-			case 158: s = "invalid entity_name_list"; break;
-			case 159: s = "invalid entity_class"; break;
-			case 160: s = "invalid entity_designator"; break;
-			case 161: s = "invalid instantiation_list"; break;
-			case 162: s = "invalid entity_aspect"; break;
-			case 163: s = "invalid group_constituent"; break;
-			case 164: s = "invalid enumeration_literal"; break;
-			case 165: s = "invalid physical_literal"; break;
-			case 166: s = "this symbol not expected in protected_type_declarative_item"; break;
-			case 167: s = "invalid protected_type_declarative_item"; break;
-			case 168: s = "this symbol not expected in protected_type_body_declarative_item"; break;
-			case 169: s = "invalid protected_type_body_declarative_item"; break;
-			case 170: s = "invalid constraint"; break;
-			case 171: s = "invalid direction"; break;
+			case 115: s = "SEMICOLON expected"; break;
+			case 116: s = "COMMA expected"; break;
+			case 117: s = "AMPERSAND expected"; break;
+			case 118: s = "LPAREN expected"; break;
+			case 119: s = "RPAREN expected"; break;
+			case 120: s = "LBRACKET expected"; break;
+			case 121: s = "RBRACKET expected"; break;
+			case 122: s = "COLON expected"; break;
+			case 123: s = "MUL expected"; break;
+			case 124: s = "DIV expected"; break;
+			case 125: s = "PLUS expected"; break;
+			case 126: s = "MINUS expected"; break;
+			case 127: s = "LT expected"; break;
+			case 128: s = "GT expected"; break;
+			case 129: s = "EQ expected"; break;
+			case 130: s = "BAR expected"; break;
+			case 131: s = "DOT expected"; break;
+			case 132: s = "??? expected"; break;
+			case 133: s = "invalid library_unit"; break;
+			case 134: s = "invalid entity_declaration"; break;
+			case 135: s = "invalid identifier"; break;
+			case 136: s = "this symbol not expected in entity_declarative_item"; break;
+			case 137: s = "invalid entity_declarative_item"; break;
+			case 138: s = "invalid type_declaration"; break;
+			case 139: s = "invalid disconnection_specification"; break;
+			case 140: s = "this symbol not expected in block_declarative_item"; break;
+			case 141: s = "invalid block_declarative_item"; break;
+			case 142: s = "this symbol not expected in configuration_declarative_item"; break;
+			case 143: s = "invalid configuration_declarative_item"; break;
+			case 144: s = "invalid block_configuration_index"; break;
+			case 145: s = "invalid block_specification"; break;
+			case 146: s = "this symbol not expected in package_declarative_item"; break;
+			case 147: s = "invalid package_declarative_item"; break;
+			case 148: s = "this symbol not expected in package_body_declarative_item"; break;
+			case 149: s = "invalid package_body_declarative_item"; break;
+			case 150: s = "invalid designator"; break;
+			case 151: s = "invalid subprogram_specification"; break;
+			case 152: s = "this symbol not expected in subprogram_declarative_item"; break;
+			case 153: s = "invalid subprogram_declarative_item"; break;
+			case 154: s = "invalid type_definition"; break;
+			case 155: s = "invalid array_type_definition"; break;
+			case 156: s = "invalid alias_designator"; break;
+			case 157: s = "invalid entity_name_list"; break;
+			case 158: s = "invalid entity_class"; break;
+			case 159: s = "invalid entity_designator"; break;
+			case 160: s = "invalid instantiation_list"; break;
+			case 161: s = "invalid entity_aspect"; break;
+			case 162: s = "invalid group_constituent"; break;
+			case 163: s = "invalid enumeration_literal"; break;
+			case 164: s = "invalid physical_literal"; break;
+			case 165: s = "this symbol not expected in protected_type_declarative_item"; break;
+			case 166: s = "invalid protected_type_declarative_item"; break;
+			case 167: s = "this symbol not expected in protected_type_body_declarative_item"; break;
+			case 168: s = "invalid protected_type_body_declarative_item"; break;
+			case 169: s = "invalid constraint"; break;
+			case 170: s = "invalid direction"; break;
+			case 171: s = "invalid architecture_statement"; break;
 			case 172: s = "invalid architecture_statement"; break;
 			case 173: s = "invalid architecture_statement_with_label"; break;
 			case 174: s = "invalid architecture_statement_optional_label"; break;
@@ -3755,6 +3918,7 @@ class Errors {
 			case 202: s = "invalid name_selected_part"; break;
 			case 203: s = "invalid name_part"; break;
 			case 204: s = "invalid name_attribute_part"; break;
+			case 205: s = "invalid choice"; break;
 			default: s = "error " + n; break;
 		}
 		printMsg(line, col, s);

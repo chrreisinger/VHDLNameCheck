@@ -2,6 +2,7 @@ package at.jku.ssw.openvc
 
 import at.jku.ssw.openvc.VHDLNameChecker._
 import java.io._
+import xml.NodeSeq
 
 object Main {
   def main(arguments: Array[String]): Unit = {
@@ -16,7 +17,7 @@ object Main {
       val result = VHDLNameChecker.checkFile(configuration, file)
       val lines = toLines(file)
       printResultTo(result, new PrintWriter(System.out), Some(lines))
-      //printResultToHTML(result, lines, "output.html")
+      printResultToHTML(result, lines, "output.html")
       //listFiles(new File("C:\\Users\\christian\\Desktop\\vlsi\\"), filter, true)
     } catch {
       case e: Exception => e.printStackTrace
@@ -49,11 +50,22 @@ object Main {
       case _ => Seq()
     }
 
+  def split(sourceString: String, pos: Int): NodeSeq = {
+    val (before, after) = sourceString.splitAt(pos-1)
+    val (identifier, rest) = after.splitAt(after.findIndexOf(_.isWhitespace))
+    <p>
+      {before}
+      <font color="red">{identifier}</font>
+      {rest}
+    </p>
+  }
+
   def printResultToHTML(result: CheckResult, sourceLines: IndexedSeq[String], file: String): Unit = {
     import org.fusesource.scalate.{TemplateSource, TemplateEngine}
     val engine = new TemplateEngine
 
-    val source = TemplateSource.fromURL(this.getClass.getResource("/templates/Output.scaml"))
+    val template = Option(this.getClass.getResource("/templates/Output.scaml")).getOrElse(new File(".\\src\\main\\resources\\templates\\Output.scaml").toURI.toURL)
+    val source = TemplateSource.fromURL(template)
     val output = engine.layout(source, Map("result" -> result, "sourceLines" -> sourceLines))
     val writer = new PrintWriter(new FileWriter(file))
     writer.println(output)

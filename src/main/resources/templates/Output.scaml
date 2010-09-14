@@ -16,7 +16,5 @@
           %th Files
           %th Errors
     - for (msg <- checkErrors)
-      %p= sourceLines(msg.position.line - 1).toLowerCase
-      %p= (" " * msg.position.charPosition) + "^"
+      =at.jku.ssw.openvc.Main.split(sourceLines(msg.position.line - 1),msg.position.charPosition)
       %p= sourceFile + ": line:" + msg.position.line + " col:" + msg.position.charPosition + " " + msg.message
-
