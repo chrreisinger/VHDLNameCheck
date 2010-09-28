@@ -12,13 +12,23 @@ object Main {
         override def accept(dir: File, name: String): Boolean = (name.endsWith(".vhd") || name.endsWith(".vhdl")) && !name.endsWith("in.vhd")
       }
       val configuration = parseCommandLineArguments(arguments)
-      val file = arguments(0)
-      def toLines(sourceFile: String) = scala.io.Source.fromFile(sourceFile).getLines().toIndexedSeq
-      val result = VHDLNameChecker.checkFile(configuration, file)
-      val lines = toLines(file)
-      printResultTo(result, new PrintWriter(System.out), Some(lines))
-      printResultToHTML(result, lines, "output.html")
-      //listFiles(new File("C:\\Users\\christian\\Desktop\\vlsi\\"), filter, true)
+
+            val file = arguments(0)
+            def toLines(sourceFile: String) = scala.io.Source.fromFile(sourceFile).getLines().toIndexedSeq
+            val result = VHDLNameChecker.checkFile(configuration, file)
+            val lines = toLines(file)
+            printResultTo(result, new PrintWriter(System.out), Some(lines))
+
+      //printResultToHTML(result, lines, "output.html")
+/*
+      val start = System.currentTimeMillis
+      listFiles(new File("""C:\Users\christian\Desktop\grlib-gpl-1.0.22-b4095\"""), filter, true).map {
+        file =>
+          println(file.getAbsolutePath)
+          ASTBuilder.fromFile(file.getAbsolutePath)
+      }
+      println("time:" + (System.currentTimeMillis - start))
+*/
     } catch {
       case e: Exception => e.printStackTrace
     }
@@ -51,12 +61,12 @@ object Main {
     }
 
   def split(sourceString: String, pos: Int): NodeSeq = {
-    val (before, after) = sourceString.splitAt(pos-1)
+    val (before, after) = sourceString.splitAt(pos - 1)
     val (identifier, rest) = after.splitAt(after.findIndexOf(_.isWhitespace))
     <p>
-      {before}
-      <font color="red">{identifier}</font>
-      {rest}
+      {before}<font color="red">
+      {identifier}
+    </font>{rest}
     </p>
   }
 

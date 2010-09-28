@@ -58,7 +58,7 @@ final class Signature(val parameterList: Option[Seq[SelectedName]], val returnTy
 object Aggregate {
   final case class ElementAssociation(choices: Option[Choices], expression: Expression)
 }
-final case class Aggregate(elements: Seq[Aggregate.ElementAssociation])
+final case class Aggregate(position: Position, elements: Seq[Aggregate.ElementAssociation])
 
 object Waveform {
   final class Element(val valueExpression: Expression, val timeExpression: Option[Expression])
@@ -97,9 +97,7 @@ object Name {
   final case class AttributePart(signature: Option[Signature], identifier: Identifier, expression: Option[Expression]) extends Part {
     val position = identifier.position
   }
-  final case class AssociationListPart(associationList: AssociationList) extends Part {
-    val position = null //TODO
-  }
+  final case class AssociationListPart(position: Position, associationList: AssociationList) extends Part
 }
 
 final class SelectedName(val identifiers: Seq[Identifier]) extends Locatable {
