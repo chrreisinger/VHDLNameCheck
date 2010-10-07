@@ -26,22 +26,20 @@ object NameChecker {
       def checkList(identifierList: Seq[Identifier]): Unit = identifierList.foreach(check(_, None))
 
       def checkInterfaceList(interfaceListOption: Option[InterfaceList]): Unit =
-        interfaceListOption.foreach {
-          interfaceList =>
-            import InterfaceList._
-            interfaceList.elements.foreach {
-              element =>
-                element.identifierList.foreach {
-                  identifier =>
-                    element match {
-                      case variableDeclaration: InterfaceVariableDeclaration => check(identifier, classOf[InterfaceVariableDeclaration])
-                      case signalDeclaration: InterfaceSignalDeclaration => check(identifier, classOf[InterfaceSignalDeclaration])
-                      case fileDeclaration: InterfaceFileDeclaration => check(identifier, classOf[InterfaceFileDeclaration])
-                      case constantDeclaration: InterfaceConstantDeclaration => check(identifier, classOf[InterfaceConstantDeclaration])
-                    }
-                }
+        for (interfaceList <- interfaceListOption) {
+          import InterfaceList._
+          for (element <- interfaceList.elements) {
+            for (identifier <- element.identifierList) {
+              element match {
+                case variableDeclaration: InterfaceVariableDeclaration => check(identifier, classOf[InterfaceVariableDeclaration])
+                case signalDeclaration: InterfaceSignalDeclaration => check(identifier, classOf[InterfaceSignalDeclaration])
+                case fileDeclaration: InterfaceFileDeclaration => check(identifier, classOf[InterfaceFileDeclaration])
+                case constantDeclaration: InterfaceConstantDeclaration => check(identifier, classOf[InterfaceConstantDeclaration])
+              }
             }
+          }
         }
+
       node match {
         case null =>
         case DesignFile(designUnits) => acceptList(designUnits)

@@ -235,10 +235,13 @@ public class Parser {
 	private boolean isAssignmentStatement() {
 		scanner.ResetPeek();
 		Token next;
+		int count=0;
 		do {
 			next = scanner.Peek();
+			if (next.kind==_lparen) count++;
+			else if (next.kind==_rparen) count--;
 		}while (next.kind!=_varAssign && next.kind!=_leq && next.kind!=_semicolon);
-		return next.kind==_varAssign || next.kind==_leq;
+		return (next.kind==_varAssign || next.kind==_leq) && count==0;
 	}
 	
 	//ConcurrentSignalAssignmentStatement = (Target leq | with) ....
@@ -385,7 +388,7 @@ public class Parser {
 			next = scanner.Peek();
 			if (next.kind==_lparen) count++;
 			else if (next.kind==_rparen) count--;
-		}while (count!=0 && next.kind!=_bar && next.kind!=_arrow && next.kind!=_comma && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
+		}while (count!=0 && next.kind!=_bar && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
 		return (next.kind==_to || next.kind==_downto) && count<=1;
 	}
 		
@@ -418,15 +421,16 @@ public class Parser {
 	lparen AssociationList rparen
 	*/
 	private boolean isFormalPartInAssociationElement() {
+		if (la.kind!=_basicIdentifier && la.kind!=_extendedIdentifier) return false;
 		scanner.ResetPeek();
 		Token next;
-		int count=1;//count lparen
+		int count=0;
 		do {
 			next = scanner.Peek();
 			if (next.kind==_lparen) count++;
 			else if (next.kind==_rparen) count--;
-		}while (count!=0 && next.kind!=_comma && next.kind!=_others && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_open);
-		return next.kind==_arrow;
+		}while (count>=0 && next.kind!=_comma && next.kind!=_others && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_open);
+		return next.kind==_arrow && count==0;
 	}
 	
 	//Range = SimpleExpression Direction  SimpleExpression
@@ -436,7 +440,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_units && next.kind!=_varAssign && next.kind!=_loop && next.kind!=_is && next.kind!=_open && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
+		}while (next.kind!=_units && next.kind!=_varAssign && next.kind!=_generate && next.kind!=_loop && next.kind!=_is && next.kind!=_open && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
 		return next.kind==_to || next.kind==_downto;
 	}
 	
@@ -451,6 +455,25 @@ public class Parser {
 		return next.kind==_range;
 	}
 	
+	private boolean isQualifiedExpression() {
+		if (la.kind!=_basicIdentifier && la.kind!=_extendedIdentifier) return false;
+		scanner.ResetPeek();
+		Token next;
+		//match SelectedName
+		do {
+			next = scanner.Peek();
+		}while (next.kind==_basicIdentifier || next.kind==_extendedIdentifier ||  next.kind==_dot);
+		return next.kind==_apostrophe && scanner.Peek().kind==_lparen;
+	}
+	
+	private boolean isComponentConfigurationInBlockConfiguration() {
+		scanner.ResetPeek();
+		Token next;
+		do {
+			next = scanner.Peek();
+		}while (next.kind!=_colon && next.kind!=_lparen &&  next.kind!=_for);
+		return next.kind==_colon;
+	}	
 	
 	private Position toPosition(Token token){
 		return new Position(token.line,token.col);
@@ -612,7 +635,7 @@ public class Parser {
 		boolean postponed=false;
 		
 		Expect(34);
-		Identifier start_identifier = Identifier();
+		Identifier identifier = Identifier();
 		Expect(48);
 		if (la.kind == 40) {
 			genericClause = GenericClause();
@@ -652,7 +675,7 @@ public class Parser {
 			UnusedIdentifier();
 		}
 		Expect(115);
-		entityDecl=new EntityDeclaration(start_identifier,toOption(genericClause),toOption(portClause),declarativeItems.toList(),concurrentStmts.toList());
+		entityDecl=new EntityDeclaration(identifier,toOption(genericClause),toOption(portClause),declarativeItems.toList(),concurrentStmts.toList());
 		return entityDecl;
 	}
 
@@ -660,7 +683,7 @@ public class Parser {
 		ArchitectureDeclaration  archDecl;
 		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
 		Expect(16);
-		Identifier start_identifier = Identifier();
+		Identifier identifier = Identifier();
 		Expect(62);
 		SelectedName entityName = SelectedName();
 		Expect(48);
@@ -678,7 +701,7 @@ public class Parser {
 			UnusedIdentifier();
 		}
 		Expect(115);
-		archDecl=new ArchitectureDeclaration(start_identifier,declarativeItems.toList(),entityName,statementList); 
+		archDecl=new ArchitectureDeclaration(identifier,declarativeItems.toList(),entityName,statementList); 
 		return archDecl;
 	}
 
@@ -687,7 +710,7 @@ public class Parser {
 		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
 		Expect(68);
 		Expect(22);
-		Identifier start_identifier = Identifier();
+		Identifier identifier = Identifier();
 		Expect(48);
 		while (StartOf(5)) {
 			DeclarativeItem item = PackageBodyDeclarativeItem();
@@ -702,7 +725,7 @@ public class Parser {
 			UnusedIdentifier();
 		}
 		Expect(115);
-		packageBody = new PackageBodyDeclaration(start_identifier,declarativeItems.toList());
+		packageBody = new PackageBodyDeclaration(identifier,declarativeItems.toList());
 		return packageBody;
 	}
 
@@ -710,7 +733,7 @@ public class Parser {
 		PackageDeclaration  packageDecl;
 		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>(); 
 		Expect(68);
-		Identifier start_identifier = Identifier();
+		Identifier identifier = Identifier();
 		Expect(48);
 		while (StartOf(6)) {
 			DeclarativeItem item = PackageDeclarativeItem();
@@ -724,7 +747,7 @@ public class Parser {
 			UnusedIdentifier();
 		}
 		Expect(115);
-		packageDecl=new PackageDeclaration(start_identifier,declarativeItems.toList());
+		packageDecl=new PackageDeclaration(identifier,declarativeItems.toList());
 		return packageDecl;
 	}
 
@@ -732,7 +755,7 @@ public class Parser {
 		ConfigurationDeclaration  configDecl;
 		ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();
 		Expect(27);
-		Identifier start_identifier = Identifier();
+		Identifier identifier = Identifier();
 		Expect(62);
 		SelectedName entityName = SelectedName();
 		Expect(48);
@@ -749,7 +772,7 @@ public class Parser {
 			UnusedIdentifier();
 		}
 		Expect(115);
-		configDecl=new ConfigurationDeclaration(start_identifier,declarativeItems.toList(),entityName,blockConfig);
+		configDecl=new ConfigurationDeclaration(identifier,declarativeItems.toList(),entityName,blockConfig);
 		return configDecl;
 	}
 
@@ -1305,12 +1328,12 @@ public class Parser {
 			useClauses.append(useClause);
 		}
 		while (la.kind == 37) {
-			if (la.kind == 37) {
-				BlockConfiguration blockConfiguration = BlockConfiguration();
-				configurations.append(blockConfiguration);
-			} else {
+			if (isComponentConfigurationInBlockConfiguration()) {
 				ComponentConfiguration componentConfiguration = ComponentConfiguration();
 				configurations.append(componentConfiguration);
+			} else {
+				BlockConfiguration blockConfiguration = BlockConfiguration();
+				configurations.append(blockConfiguration);
 			}
 		}
 		Expect(33);
@@ -1469,7 +1492,7 @@ public class Parser {
 		ComponentDeclaration  componentDecl;
 		Position pos=toPosition(la);InterfaceList genericClause=null,portClause=null;
 		Expect(26);
-		Identifier start_identifier = Identifier();
+		Identifier identifier = Identifier();
 		if (la.kind == 48) {
 			Get();
 		}
@@ -1485,7 +1508,7 @@ public class Parser {
 			UnusedIdentifier();
 		}
 		Expect(115);
-		componentDecl=new ComponentDeclaration(pos,start_identifier,toOption(genericClause),toOption(portClause));
+		componentDecl=new ComponentDeclaration(pos,identifier,toOption(genericClause),toOption(portClause));
 		return componentDecl;
 	}
 
@@ -3468,7 +3491,10 @@ public class Parser {
 	Expression  Primary() {
 		Expression  expr;
 		expr=null;
-		if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
+		if (isQualifiedExpression()) {
+			SelectedName typeName = SelectedName();
+			expr = QualifiedExpression(typeName);
+		} else if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
 			Name name = Name();
 			expr=new NameExpression(name);
 		} else if (StartOf(34)) {
@@ -3479,6 +3505,14 @@ public class Parser {
 			Aggregate aggregate = Aggregate();
 			expr=new AggregateExpression(aggregate);
 		} else SynErr(200);
+		return expr;
+	}
+
+	QualifiedExpression  QualifiedExpression(SelectedName typeName) {
+		QualifiedExpression  expr;
+		Expect(8);
+		Aggregate aggregate = Aggregate();
+		expr=new QualifiedExpression(typeName,new AggregateExpression(aggregate));
 		return expr;
 	}
 
@@ -3543,14 +3577,6 @@ public class Parser {
 			}
 		} else SynErr(202);
 		return newExpression;
-	}
-
-	QualifiedExpression  QualifiedExpression(SelectedName typeName) {
-		QualifiedExpression  expr;
-		Expect(8);
-		Aggregate aggregate = Aggregate();
-		expr=new QualifiedExpression(typeName,new AggregateExpression(aggregate));
-		return expr;
 	}
 
 	Identifier  NamePrefix() {

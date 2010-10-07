@@ -86,10 +86,13 @@ COMPILER VHDL
 	private boolean isAssignmentStatement() {
 		scanner.ResetPeek();
 		Token next;
+		int count=0;
 		do {
 			next = scanner.Peek();
+			if (next.kind==_lparen) count++;
+			else if (next.kind==_rparen) count--;
 		}while (next.kind!=_varAssign && next.kind!=_leq && next.kind!=_semicolon);
-		return next.kind==_varAssign || next.kind==_leq;
+		return (next.kind==_varAssign || next.kind==_leq) && count==0;
 	}
 	
 	//ConcurrentSignalAssignmentStatement = (Target leq | with) ....
@@ -236,7 +239,7 @@ COMPILER VHDL
 			next = scanner.Peek();
 			if (next.kind==_lparen) count++;
 			else if (next.kind==_rparen) count--;
-		}while (count!=0 && next.kind!=_bar && next.kind!=_arrow && next.kind!=_comma && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
+		}while (count!=0 && next.kind!=_bar && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
 		return (next.kind==_to || next.kind==_downto) && count<=1;
 	}
 		
@@ -269,15 +272,16 @@ COMPILER VHDL
 	lparen AssociationList rparen
 	*/
 	private boolean isFormalPartInAssociationElement() {
+		if (la.kind!=_basicIdentifier && la.kind!=_extendedIdentifier) return false;
 		scanner.ResetPeek();
 		Token next;
-		int count=1;//count lparen
+		int count=0;
 		do {
 			next = scanner.Peek();
 			if (next.kind==_lparen) count++;
 			else if (next.kind==_rparen) count--;
-		}while (count!=0 && next.kind!=_comma && next.kind!=_others && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_open);
-		return next.kind==_arrow;
+		}while (count>=0 && next.kind!=_comma && next.kind!=_others && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_open);
+		return next.kind==_arrow && count==0;
 	}
 	
 	//Range = SimpleExpression Direction  SimpleExpression
@@ -287,7 +291,7 @@ COMPILER VHDL
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_units && next.kind!=_varAssign && next.kind!=_loop && next.kind!=_is && next.kind!=_open && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
+		}while (next.kind!=_units && next.kind!=_varAssign && next.kind!=_generate && next.kind!=_loop && next.kind!=_is && next.kind!=_open && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
 		return next.kind==_to || next.kind==_downto;
 	}
 	
@@ -302,6 +306,25 @@ COMPILER VHDL
 		return next.kind==_range;
 	}
 	
+	private boolean isQualifiedExpression() {
+		if (la.kind!=_basicIdentifier && la.kind!=_extendedIdentifier) return false;
+		scanner.ResetPeek();
+		Token next;
+		//match SelectedName
+		do {
+			next = scanner.Peek();
+		}while (next.kind==_basicIdentifier || next.kind==_extendedIdentifier ||  next.kind==_dot);
+		return next.kind==_apostrophe && scanner.Peek().kind==_lparen;
+	}
+	
+	private boolean isComponentConfigurationInBlockConfiguration() {
+		scanner.ResetPeek();
+		Token next;
+		do {
+			next = scanner.Peek();
+		}while (next.kind!=_colon && next.kind!=_lparen &&  next.kind!=_for);
+		return next.kind==_colon;
+	}	
 	
 	private Position toPosition(Token token){
 		return new Position(token.line,token.col);
@@ -378,7 +401,7 @@ TOKENS
 	  
 	bitStringLiteral = baseSpecifier '\"' [extendedDigit { ['_'] extendedDigit }] '\"'.
     
-    apostrophe = "'" CONTEXT (letter notApostrophe).
+    apostrophe = "'" CONTEXT ((letter|"(") notApostrophe).
     
     characterLiteral = "'" ("\"" | "\\" | graphicCharacter ) "'".
     /*
@@ -594,7 +617,7 @@ EntityDeclaration<out EntityDeclaration entityDecl> =
 		 	Identifier label=null;
 		 	boolean postponed=false;
 		.)
-		entity Identifier<out Identifier start_identifier> is
+		entity Identifier<out Identifier identifier> is
 			[GenericClause<out genericClause>]
 			[PortClause<out portClause>]
 			{EntityDeclarativeItem<out DeclarativeItem item>(.declarativeItems.append(item); .)} 
@@ -608,7 +631,7 @@ EntityDeclaration<out EntityDeclaration entityDecl> =
 			(.concurrentStmts.append(stmt);.)
 			}]
 		end [entity] [UnusedIdentifier] semicolon
-		(.entityDecl=new EntityDeclaration(start_identifier,toOption(genericClause),toOption(portClause),declarativeItems.toList(),concurrentStmts.toList());.)
+		(.entityDecl=new EntityDeclaration(identifier,toOption(genericClause),toOption(portClause),declarativeItems.toList(),concurrentStmts.toList());.)
 		.
 
 EntityDeclarativeItem<out DeclarativeItem item> =
@@ -634,12 +657,12 @@ EntityDeclarativeItem<out DeclarativeItem item> =
 		
 ArchitectureBody<out ArchitectureDeclaration archDecl> =
 		(.ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();.)
-		architecture Identifier<out Identifier start_identifier> of SelectedName<out SelectedName entityName> is
+		architecture Identifier<out Identifier identifier> of SelectedName<out SelectedName entityName> is
 			{BlockDeclarativeItem<out DeclarativeItem item>(.declarativeItems.append(item); .)}
 		begin
 			ArchitectureStatementList<.out Seq<ConcurrentStatement> statementList.>
 		end [architecture] [UnusedIdentifier] semicolon
-		(.archDecl=new ArchitectureDeclaration(start_identifier,declarativeItems.toList(),entityName,statementList); .)
+		(.archDecl=new ArchitectureDeclaration(identifier,declarativeItems.toList(),entityName,statementList); .)
 		.
 		
 ConfigurationDeclarativeItem<out DeclarativeItem item> =
@@ -654,11 +677,11 @@ ConfigurationDeclarativeItem<out DeclarativeItem item> =
 		
 ConfigurationDeclaration<out ConfigurationDeclaration configDecl> =
 		(.ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();.)
-		configuration Identifier<out Identifier start_identifier> of SelectedName<out SelectedName entityName> is
+		configuration Identifier<out Identifier identifier> of SelectedName<out SelectedName entityName> is
 			{ConfigurationDeclarativeItem<out DeclarativeItem item>(.declarativeItems.append(item);.)}
 			BlockConfiguration<out BlockConfiguration blockConfig>
 		end [configuration] [UnusedIdentifier] semicolon
-		(.configDecl=new ConfigurationDeclaration(start_identifier,declarativeItems.toList(),entityName,blockConfig);.)
+		(.configDecl=new ConfigurationDeclaration(identifier,declarativeItems.toList(),entityName,blockConfig);.)
 		.
 
 BlockConfigurationIndex<out Either<DiscreteRange,Expression> index> =
@@ -687,8 +710,8 @@ BlockConfiguration<out BlockConfiguration blockConfig> =
 		for BlockSpecification<out BlockConfigurationSpecification blockSpec>
 		{UseClause<out UseClause useClause> (.useClauses.append(useClause);.)}
 		{
-			BlockConfiguration<out BlockConfiguration blockConfiguration> (.configurations.append(blockConfiguration);.)
-			|ComponentConfiguration<out ComponentConfiguration componentConfiguration> (.configurations.append(componentConfiguration);.)
+			IF(isComponentConfigurationInBlockConfiguration()) ComponentConfiguration<out ComponentConfiguration componentConfiguration> (.configurations.append(componentConfiguration);.)
+			| BlockConfiguration<out BlockConfiguration blockConfiguration> (.configurations.append(blockConfiguration);.)
 		}
 		end for semicolon 
 		(.blockConfig=new BlockConfiguration(blockSpec,useClauses.toList(),configurations.toList());.)
@@ -705,10 +728,10 @@ ComponentConfiguration<out ComponentConfiguration componentConfig> =
 			
 PackageDeclaration<out PackageDeclaration packageDecl> = 
 		(. ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>(); .)
-		package Identifier<out Identifier start_identifier> is
+		package Identifier<out Identifier identifier> is
 			{PackageDeclarativeItem<out DeclarativeItem item>(.declarativeItems.append(item);.)}
 		end [package] [UnusedIdentifier] semicolon
-		(.packageDecl=new PackageDeclaration(start_identifier,declarativeItems.toList());.)
+		(.packageDecl=new PackageDeclaration(identifier,declarativeItems.toList());.)
 		.
 		
 PackageDeclarativeItem<out DeclarativeItem item> =
@@ -735,10 +758,10 @@ PackageDeclarativeItem<out DeclarativeItem item> =
 
 PackageBody<out PackageBodyDeclaration packageBody> =
 		(. ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>();.)
-		package body Identifier<out Identifier start_identifier> is
+		package body Identifier<out Identifier identifier> is
 			{PackageBodyDeclarativeItem<out DeclarativeItem item>(.declarativeItems.append(item);.)}
 		end [package body] [UnusedIdentifier] semicolon
-		(.packageBody = new PackageBodyDeclaration(start_identifier,declarativeItems.toList());.)
+		(.packageBody = new PackageBodyDeclaration(identifier,declarativeItems.toList());.)
 		.
     
 PackageBodyDeclarativeItem <out DeclarativeItem item> =
@@ -893,11 +916,11 @@ AliasDesignator<out Identifier identifier> =
 	
 CcomponentDeclaration<out ComponentDeclaration componentDecl> =
 		(.Position pos=toPosition(la);InterfaceList genericClause=null,portClause=null;.)
-		component Identifier<out Identifier start_identifier> [is]
+		component Identifier<out Identifier identifier> [is]
 			[GenericClause<out genericClause>]
 			[PortClause<out portClause>]
 		end component [UnusedIdentifier] semicolon
-		(.componentDecl=new ComponentDeclaration(pos,start_identifier,toOption(genericClause),toOption(portClause));.)
+		(.componentDecl=new ComponentDeclaration(pos,identifier,toOption(genericClause),toOption(portClause));.)
 		.
 
 AttributeDeclaration<out AttributeDeclaration attributeDecl> =
@@ -1878,8 +1901,8 @@ Primary<out Expression expr> =
 	(.expr=null;.)
 	(
 	 
-	 //SelectedName QualifiedExpression should be handled by NameAttributePart
-	   Name<out Name name> (.expr=new NameExpression(name);.)
+	   IF(isQualifiedExpression()) SelectedName<out SelectedName typeName> QualifiedExpression<out expr,typeName>
+	 | Name<out Name name> (.expr=new NameExpression(name);.)
 	 | Literal<out expr> 
 	 | Allocator<out expr>
 	 | Aggregate<out Aggregate aggregate> (.expr=new AggregateExpression(aggregate);.)
@@ -1897,14 +1920,6 @@ Allocator<out Expression newExpression> =
 				.)]
 	 	)
 	 	.
-
-/*
-function_call<out FunctionCallExpression functionCall> =
-		(.AssociationList parameter_association_list=null;.)
-		SelectedName<out SelectedName function_name> [lparen AssociationList<out parameter_association_list> rparen]
-		(.functionCall=new FunctionCallExpression(function_name,toOption(parameter_association_list));.)
-		.
-*/
 	
 QualifiedExpression<out QualifiedExpression expr,SelectedName typeName> =
 		apostrophe Aggregate<out Aggregate aggregate>
@@ -1949,8 +1964,6 @@ NamePart<out at.jku.ssw.openvc.ast.Name.Part part> =
   	 NameSelectedPart<out part>
    	 | NameAttributePart<out part>
    	 | IF(isNameSlicePart())NameSlicePart<out part>
-   	 //| IF(IsNameAssociationListPart())NameAssociationListPart<out part>
-   	 //| name_indexed_part<out part> handled by NameAssociationListPart
    	 | NameAssociationListPart<out part>
   	 )
   	 .
@@ -1972,12 +1985,6 @@ NameAssociationListPart<out at.jku.ssw.openvc.ast.Name.AssociationListPart part>
 NameSlicePart<out at.jku.ssw.openvc.ast.Name.SlicePart part> =
 		lparen DiscreteRange<out DiscreteRange discreteRange> rparen  (.part=new Name.SlicePart(discreteRange);.)
 		.
-/*				
-name_indexed_part<out Name.IndexPart part> =
-		(. ListBuffer<Expression> indexes=new ListBuffer<Expression>(); .)
-		 lparen Expression<out Expression expr> (.indexes.append(expr);.) {comma Expression<out expr> (.indexes.append(expr);.)} rparen (.part=new Name.IndexPart(indexes.toList());.) 
-		 .
-*/
 
 NameAttributePart<out at.jku.ssw.openvc.ast.Name.AttributePart part> =
 		(.Signature signature=null;Identifier identifier=null;Expression expr=null;.)

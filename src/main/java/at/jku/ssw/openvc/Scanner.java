@@ -699,8 +699,8 @@ public class Scanner {
 					else if (ch == '"') {AddCh(); state = 26; break;}
 					else {t.kind = 1; t.val = new String(tval, 0, tlen); CheckLiteral(); return t;}
 				case 53:
-					if (ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {apx++; AddCh(); state = 63; break;}
-					else if (ch >= ' ' && ch <= '@' || ch >= '[' && ch <= '`' || ch >= '{' && ch <= '~' || ch >= 160 && ch <= 191 || ch == 215 || ch == 247) {AddCh(); state = 31; break;}
+					if (ch == '(' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {apx++; AddCh(); state = 63; break;}
+					else if (ch >= ' ' && ch <= 39 || ch >= ')' && ch <= '@' || ch >= '[' && ch <= '`' || ch >= '{' && ch <= '~' || ch >= 160 && ch <= 191 || ch == 215 || ch == 247) {AddCh(); state = 31; break;}
 					else {t.kind = noSym; break loop;}
 				case 54:
 					if (ch == '*') {AddCh(); state = 33; break;}
