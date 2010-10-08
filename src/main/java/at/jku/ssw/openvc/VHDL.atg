@@ -182,7 +182,7 @@ COMPILER VHDL
 		/*
 		ArchitectureStatement =
 		(
-		label_colon<out label> (
+		LabelColon<out label> (
 			ArchitectureStatementWithLabel<out concurrentStmt,label>
 			| ArchitectureStatementOptionalLabel<out concurrentStmt,label>
 			)
@@ -622,7 +622,7 @@ EntityDeclaration<out EntityDeclaration entityDecl> =
 			[PortClause<out portClause>]
 			{EntityDeclarativeItem<out DeclarativeItem item>(.declarativeItems.append(item); .)} 
 		[begin
-			{[IF(scanner.Peek().kind==_colon) label_colon<out label>] [postponed (.postponed=true;.)] 
+			{[IF(scanner.Peek().kind==_colon) LabelColon<out label>] [postponed (.postponed=true;.)] 
 			(
 			ConcurrentAssertionStatement<out stmt,label,postponed>
 			| ConcurrentProcedureCallStatement<out stmt,label,postponed>
@@ -1262,7 +1262,7 @@ ArchitectureStatementList<out Seq<ConcurrentStatement> list> =
 ArchitectureStatement<out ConcurrentStatement concurrentStmt> =
 		(.concurrentStmt=null; Identifier label=null;.)
 		(
-		IF(scanner.Peek().kind==_colon) label_colon<out label> (
+		IF(scanner.Peek().kind==_colon) LabelColon<out label> (
 			IF(isArchitecutreStatementWithLabel()) ArchitectureStatementWithLabel<out concurrentStmt,label>
 			| ArchitectureStatementOptionalLabel<out concurrentStmt,label>
 			)
@@ -1495,7 +1495,7 @@ SequentialStatementList<out Seq<SequentialStatement> list> =
 SequentialStatement<out SequentialStatement sequentialStatement> =
 		(.sequentialStatement=null;Identifier label=null;.)
 		(
-		[IF(scanner.Peek().kind==_colon) label_colon<out label>] SYNC
+		[IF(scanner.Peek().kind==_colon) LabelColon<out label>] SYNC
 		(WaitStatement<out sequentialStatement,label>
 		| AssertionStatement<out sequentialStatement,label>
 		| ReportStatement<out sequentialStatement,label>
@@ -2069,7 +2069,7 @@ Identifier<out Identifier id> =
 		)
 		.
 
-label_colon<out Identifier label> =
+LabelColon<out Identifier label> =
 		Identifier<out label> colon
 		.
 		

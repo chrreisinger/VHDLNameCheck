@@ -331,7 +331,7 @@ public class Parser {
 		/*
 		ArchitectureStatement =
 		(
-		label_colon<out label> (
+		LabelColon<out label> (
 			ArchitectureStatementWithLabel<out concurrentStmt,label>
 			| ArchitectureStatementOptionalLabel<out concurrentStmt,label>
 			)
@@ -651,7 +651,7 @@ public class Parser {
 			Get();
 			while (StartOf(3)) {
 				if (scanner.Peek().kind==_colon) {
-					label = label_colon();
+					label = LabelColon();
 				}
 				if (la.kind == 70) {
 					Get();
@@ -931,7 +931,7 @@ public class Parser {
 		return item;
 	}
 
-	Identifier  label_colon() {
+	Identifier  LabelColon() {
 		Identifier  label;
 		label = Identifier();
 		Expect(122);
@@ -2375,7 +2375,7 @@ public class Parser {
 		ConcurrentStatement  concurrentStmt;
 		concurrentStmt=null; Identifier label=null;
 		if (scanner.Peek().kind==_colon) {
-			label = label_colon();
+			label = LabelColon();
 			if (isArchitecutreStatementWithLabel()) {
 				concurrentStmt = ArchitectureStatementWithLabel(label);
 			} else if (StartOf(12)) {
@@ -2808,7 +2808,7 @@ public class Parser {
 		SequentialStatement  sequentialStatement;
 		sequentialStatement=null;Identifier label=null;
 		if (scanner.Peek().kind==_colon) {
-			label = label_colon();
+			label = LabelColon();
 		}
 		while (!(StartOf(29))) {SynErr(185); Get();}
 		if (la.kind == 102) {
