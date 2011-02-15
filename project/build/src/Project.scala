@@ -2,10 +2,10 @@ import sbt._
 import de.element34.sbteclipsify._
 
 class Project(info: ProjectInfo) extends DefaultProject(info) with Eclipsify with IdeaProject with ProguardProject {
-  val scalaTestJar = "org.scalatest" % "scalatest" % "1.2"
+  val scalaTestJar = "org.scalatest" % "scalatest" % "1.3" withSources() withJavadoc()
   val codaRepo = "Coda Hale's Repository" at "http://repo.codahale.com/"
-  val fig = "com.codahale" %% "fig" % "1.0.3" // withSources ()
-  val scalate = "org.fusesource.scalate" % "scalate-core" % "1.2"
+  val fig = "com.codahale" %% "fig" % "1.1.1" withSources()
+  val scalate = "org.fusesource.scalate" % "scalate-core" % "1.4.0" withSources() withJavadoc()
   val slf4j_nop = "org.slf4j" % "slf4j-nop" % "1.6.1"
 
   override val compileOptions = super.compileOptions ++ (Unchecked :: Deprecation :: /*Optimize ::*/ Nil)

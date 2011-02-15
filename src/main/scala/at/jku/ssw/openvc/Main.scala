@@ -23,10 +23,9 @@ object Main {
       */
       for (i <- 0 to 10) {
         val start = System.currentTimeMillis
-        listFiles(new File("""C:\Users\christian\Desktop\grlib-gpl-1.0.22-b4095\"""), filter, true).map {
-          file =>
+        listFiles(new File("""C:\Users\christian\Desktop\grlib-gpl-1.0.22-b4095\"""), filter, true).map { file =>
           //println(file.getAbsolutePath)
-            ASTBuilder.fromFile(file.getAbsolutePath)
+          ASTBuilder.fromFile(file.getAbsolutePath)
         }
         println("time:" + (System.currentTimeMillis - start))
       }
@@ -43,10 +42,9 @@ object Main {
     def printMessages(prefix: String, messages: Seq[CheckerMessage]): Unit = {
       for (msg <- messages) {
         writer.println(prefix + sourceFile + ": line:" + msg.position.line + " col:" + msg.position.charPosition + " " + msg.message)
-        sourceLinesOption.foreach {
-          sourceLines =>
-            writer.println(sourceLines(msg.position.line - 1).toLowerCase)
-            writer.println((" " * (msg.position.charPosition - 1)) + "^")
+        sourceLinesOption.foreach { sourceLines =>
+          writer.println(sourceLines(msg.position.line - 1).toLowerCase)
+          writer.println((" " * (msg.position.charPosition - 1)) + "^")
         }
       }
     }
@@ -65,14 +63,14 @@ object Main {
     val (before, after) = sourceString.splitAt(pos - 1)
     val (identifier, rest) = after.splitAt(after.findIndexOf(_.isWhitespace))
     <p>
-      {before}<font color="red">
-      {identifier}
-    </font>{rest}
+      { before }<font color="red">
+                  { identifier }
+                </font>{ rest }
     </p>
   }
 
   def printResultToHTML(result: CheckResult, sourceLines: IndexedSeq[String], file: String): Unit = {
-    import org.fusesource.scalate.{TemplateSource, TemplateEngine}
+    import org.fusesource.scalate.{ TemplateSource, TemplateEngine }
     val engine = new TemplateEngine
 
     val template = Option(this.getClass.getResource("/templates/Output.scaml")).getOrElse(new File(".\\src\\main\\resources\\templates\\Output.scaml").toURI.toURL)
@@ -108,7 +106,6 @@ object Main {
     }
     new Configuration(debug, loadConfiguration("configuration.json"))
   }
-
 
 }
 /*
@@ -162,4 +159,4 @@ MyClass      _________   _________   _________   /  / /_________
     ________________________________________________________________
      ______________________________________________________________
       ____________________________________________________________
-      */
+      */ 

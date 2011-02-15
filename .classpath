@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <classpath>
-<classpathentry kind="src" path="src\main\java" output="target\scala_2.8.0\test-classes" including="**/*.java" />
-<classpathentry kind="src" path="src\test\scala" output="target\scala_2.8.0\test-classes" including="**/*.scala" />
+<classpathentry kind="src" path="src\main\java" including="**/*.java" />
+<classpathentry kind="src" path="src\test\scala" output="target\scala_2.8.1\test-classes" including="**/*.scala" />
 <classpathentry kind="src" path="src\main\scala" including="**/*.scala" />
-<classpathentry kind="lib" path="lib_managed\scala_2.8.0\compile\fig_2.8.0-1.0.3.jar" />
-<classpathentry kind="lib" path="lib_managed\scala_2.8.0\compile\scalate-core-1.2.jar" />
-<classpathentry kind="lib" path="lib_managed\scala_2.8.0\compile\slf4j-nop-1.6.1.jar" />
-<classpathentry kind="lib" path="lib_managed\scala_2.8.0\compile\slf4j-api-1.6.1.jar" />
-<classpathentry kind="lib" path="lib_managed\scala_2.8.0\compile\scalatest-1.2.jar" />
-<classpathentry kind="lib" path="lib_managed\scala_2.8.0\compile\paranamer-2.0.jar" />
-<classpathentry kind="lib" path="lib_managed\scala_2.8.0\compile\lift-json_2.8.0-2.1-M1.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\scalate-core-1.4.0-javadoc.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\paranamer-2.3.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\slf4j-api-1.6.1.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\jackson-mapper-asl-1.7.0.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\slf4j-nop-1.6.1.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\scalatest-1.3-javadoc.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\scalate-core-1.4.0.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\jerkson_2.8.1-0.1.2.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\fig_2.8.1-1.1.1.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\jackson-core-asl-1.7.0.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\scalatest-1.3.jar" />
+<classpathentry kind="lib" path="lib_managed\scala_2.8.1\compile\scalate-util-1.4.0.jar" />
 <classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER" />
 <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER" />
-<classpathentry kind="output" path="target\scala_2.8.0\classes" />
+<classpathentry kind="output" path="target\scala_2.8.1\classes" />
 </classpath>
