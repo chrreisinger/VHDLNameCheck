@@ -20,15 +20,15 @@ final case class ReportStatement(position: Position, label: Option[Identifier], 
 final case class ReturnStatement(position: Position, label: Option[Identifier], expression: Option[Expression]) extends SequentialStatement
 
 abstract sealed class AbstractLoopStatement extends SequentialStatement {
-  val sequentialStatementList: Seq[SequentialStatement]
+  val sequentialStatements: Seq[SequentialStatement]
   val label: Option[Identifier]
 }
 
-final case class LoopStatement(position: Position, label: Option[Identifier], sequentialStatementList: Seq[SequentialStatement]) extends AbstractLoopStatement
+final case class LoopStatement(position: Position, label: Option[Identifier], sequentialStatements: Seq[SequentialStatement]) extends AbstractLoopStatement
 
-final case class WhileStatement(position: Position, label: Option[Identifier], condition: Expression, sequentialStatementList: Seq[SequentialStatement]) extends AbstractLoopStatement
+final case class WhileStatement(position: Position, label: Option[Identifier], condition: Expression, sequentialStatements: Seq[SequentialStatement]) extends AbstractLoopStatement
 
-final case class ForStatement(position: Position, label: Option[Identifier], identifier: Identifier, discreteRange: DiscreteRange, sequentialStatementList: Seq[SequentialStatement]) extends AbstractLoopStatement
+final case class ForStatement(position: Position, label: Option[Identifier], identifier: Identifier, discreteRange: DiscreteRange, sequentialStatements: Seq[SequentialStatement]) extends AbstractLoopStatement
 
 abstract sealed class SignalAssignmentStatement extends SequentialStatement
 
@@ -51,4 +51,4 @@ object IfStatement {
   final case class IfThenPart(condition: Expression, statements: Seq[SequentialStatement])
 }
 
-final case class IfStatement(position: Position, label: Option[Identifier], ifThenList: Seq[IfStatement.IfThenPart], elseSequentialStatementList: Option[Seq[SequentialStatement]]) extends SequentialStatement
+final case class IfStatement(position: Position, label: Option[Identifier], ifThenList: Seq[IfStatement.IfThenPart], elseSequentialStatements: Option[Seq[SequentialStatement]]) extends SequentialStatement

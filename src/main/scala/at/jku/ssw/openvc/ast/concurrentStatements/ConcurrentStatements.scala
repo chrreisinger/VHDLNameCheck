@@ -35,17 +35,17 @@ final case class ConcurrentProcedureCallStatement(label: Option[Identifier], pos
 
 final case class ConcurrentAssertionStatement(position: Position, label: Option[Identifier], postponed: Boolean, condition: Expression, reportExpression: Option[Expression], severityExpression: Option[Expression]) extends ConcurrentStatement
 
-final case class IfGenerateStatement(position: Position, label: Option[Identifier], condition: Expression, declarativeItems: Seq[DeclarativeItem], statementList: Seq[ConcurrentStatement]) extends ConcurrentStatement
+final case class IfGenerateStatement(position: Position, label: Option[Identifier], condition: Expression, declarativeItems: Seq[DeclarativeItem], concurrentStatements: Seq[ConcurrentStatement]) extends ConcurrentStatement
 
 final case class ForGenerateStatement(position: Position, label: Option[Identifier], loopIdentifier: Identifier, discreteRange: DiscreteRange, declarativeItems: Seq[DeclarativeItem],
-                                      statementList: Seq[ConcurrentStatement]) extends ConcurrentStatement
+                                      concurrentStatements: Seq[ConcurrentStatement]) extends ConcurrentStatement
 
 final case class ComponentInstantiationStatement(position: Position, label: Identifier, componentType: ComponentType, name: SelectedName, architectureIdentifier: Option[Identifier],
                                                  genericAssociationList: Option[AssociationList], portAssociationList: Option[AssociationList]) extends ConcurrentStatement
 
 final case class ProcessStatement(position: Position, label: Option[Identifier], postponed: Boolean, sensitivityList: Option[Seq[Name]], declarativeItems: Seq[DeclarativeItem],
-                                  sequentialStatementList: Seq[SequentialStatement]) extends ConcurrentStatement
+                                  sequentialStatements: Seq[SequentialStatement]) extends ConcurrentStatement
 
 final case class BlockStatement(position: Position, label: Option[Identifier], guardExpression: Option[Expression], genericInterfaceList: Option[InterfaceList],
                                 genericAssociationList: Option[AssociationList], portInterfaceList: Option[InterfaceList], portAssociationList: Option[AssociationList],
-                                declarativeItems: Seq[DeclarativeItem], statementList: Seq[ConcurrentStatement]) extends ConcurrentStatement
+                                declarativeItems: Seq[DeclarativeItem], concurrentStatements: Seq[ConcurrentStatement]) extends ConcurrentStatement

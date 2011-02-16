@@ -14,20 +14,20 @@ final case class AttributeSpecification(position: Position, identifier: Identifi
 final case class AttributeDeclaration(position: Position, identifier: Identifier, typeName: SelectedName) extends DeclarativeItem
 
 abstract sealed class ObjectDeclaration extends DeclarativeItem {
-  val identifierList: Seq[Identifier]
+  val identifiers: Seq[Identifier]
   val subType: SubTypeIndication
 }
 
-final case class VariableDeclaration(position: Position, shared: Boolean, identifierList: Seq[Identifier], subType: SubTypeIndication, initialValueExpression: Option[Expression])
+final case class VariableDeclaration(position: Position, shared: Boolean, identifiers: Seq[Identifier], subType: SubTypeIndication, initialValueExpression: Option[Expression])
         extends ObjectDeclaration
 
-final case class ConstantDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, defaultExpression: Option[Expression])
+final case class ConstantDeclaration(position: Position, identifiers: Seq[Identifier], subType: SubTypeIndication, defaultExpression: Option[Expression])
         extends ObjectDeclaration
 
-final case class FileDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, fileOpenKindExpression: Option[Expression], fileLogicalName: Option[Expression])
+final case class FileDeclaration(position: Position, identifiers: Seq[Identifier], subType: SubTypeIndication, fileOpenKindExpression: Option[Expression], fileLogicalName: Option[Expression])
         extends ObjectDeclaration
 
-final case class SignalDeclaration(position: Position, identifierList: Seq[Identifier], subType: SubTypeIndication, signalType: Option[SignalType], defaultExpression: Option[Expression])
+final case class SignalDeclaration(position: Position, identifiers: Seq[Identifier], subType: SubTypeIndication, signalType: Option[SignalType], defaultExpression: Option[Expression])
         extends ObjectDeclaration
 
 final case class ComponentDeclaration(position: Position, identifier: Identifier, genericInterfaceList: Option[InterfaceList], portInterfaceList: Option[InterfaceList])
@@ -83,11 +83,11 @@ abstract sealed class SubProgramDefinition extends DeclarativeItem {
 }
 
 final case class FunctionDefinition(position: Position, pure: Boolean, identifier: Identifier, parameterInterfaceList: Option[InterfaceList], returnType: SelectedName,
-                                    declarativeItems: Seq[DeclarativeItem], sequentialStatementList: Seq[SequentialStatement])
+                                    declarativeItems: Seq[DeclarativeItem], sequentialStatements: Seq[SequentialStatement])
         extends SubProgramDefinition
 
 final case class ProcedureDefinition(position: Position, identifier: Identifier, parameterInterfaceList: Option[InterfaceList], declarativeItems: Seq[DeclarativeItem],
-                                     sequentialStatementList: Seq[SequentialStatement])
+                                     sequentialStatements: Seq[SequentialStatement])
         extends SubProgramDefinition
 
 final case class ConfigurationSpecification(position: Position) extends DeclarativeItem
@@ -112,7 +112,7 @@ final case class IntegerOrFloatingPointTypeDefinition(position: Position, identi
 final case class AccessTypeDefinition(position: Position, identifier: Identifier, subType: SubTypeIndication) extends AbstractTypeDeclaration
 
 object RecordTypeDefinition {
-  final class Element(val identifierList: Seq[Identifier], val subType: SubTypeIndication)
+  final class Element(val identifiers: Seq[Identifier], val subType: SubTypeIndication)
 }
 final case class RecordTypeDefinition(position: Position, identifier: Identifier, elements: Seq[RecordTypeDefinition.Element]) extends AbstractTypeDeclaration
 

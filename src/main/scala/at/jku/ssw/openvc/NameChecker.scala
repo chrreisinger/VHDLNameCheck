@@ -63,14 +63,14 @@ object NameChecker {
           acceptList(configurationDeclaration.declarativeItems)
         //declarative Items
         //handles VariableDeclaration,ConstantDeclaration,SignalDeclaration and FileDeclaration
-        case objectDeclaration: ObjectDeclaration => checkList(objectDeclaration.identifierList)
+        case objectDeclaration: ObjectDeclaration => checkList(objectDeclaration.identifiers)
         case typeDeclaration: AbstractTypeDeclaration =>
           check(typeDeclaration.identifier, classOf[AbstractTypeDeclaration])
         /*typeDeclaration match {
           case enumerationType: EnumerationTypeDefinition => //enumerationType.elements.map(id => id.text.replace("'", ""))
           case physicalType: PhysicalTypeDefinition =>
           //physicalType.elements, Map(physicalType.baseIdentifier
-          case recordType: RecordTypeDefinition => //recordType.elements.flatMap(_.identifierList)
+          case recordType: RecordTypeDefinition => //recordType.elements.flatMap(_.identifiers)
           case protectedType: ProtectedTypeDeclaration => acceptList(protectedType.declarativeItems)
           case protectedTypeBody: ProtectedTypeBodyDeclaration => acceptList(protectedTypeBody.declarativeItems)
           case typeDef: IncompleteTypeDeclaration =>
@@ -83,12 +83,12 @@ object NameChecker {
           check(functionDefinition.identifier)
           checkInterfaceList(functionDefinition.parameterInterfaceList)
           acceptList(functionDefinition.declarativeItems)
-          acceptList(functionDefinition.sequentialStatementList)
+          acceptList(functionDefinition.sequentialStatements)
         case procedureDefinition: ProcedureDefinition =>
           check(procedureDefinition.identifier)
           checkInterfaceList(procedureDefinition.parameterInterfaceList)
           acceptList(procedureDefinition.declarativeItems)
-          acceptList(procedureDefinition.sequentialStatementList)
+          acceptList(procedureDefinition.sequentialStatements)
         case functionDeclaration: FunctionDeclaration =>
           check(functionDeclaration.identifier)
           checkInterfaceList(functionDeclaration.parameterInterfaceList)
@@ -110,18 +110,18 @@ object NameChecker {
         //concurrent Statements
         case ifGenerateStatement: IfGenerateStatement =>
           acceptList(ifGenerateStatement.declarativeItems)
-          acceptList(ifGenerateStatement.statementList)
+          acceptList(ifGenerateStatement.concurrentStatements)
         case forGenerateStatement: ForGenerateStatement =>
           acceptList(forGenerateStatement.declarativeItems)
-          acceptList(forGenerateStatement.statementList)
+          acceptList(forGenerateStatement.concurrentStatements)
         case processStatement: ProcessStatement =>
           acceptList(processStatement.declarativeItems)
-          acceptList(processStatement.sequentialStatementList)
+          acceptList(processStatement.sequentialStatements)
         case blockStatement: BlockStatement =>
           checkInterfaceList(blockStatement.genericInterfaceList)
           checkInterfaceList(blockStatement.portInterfaceList)
           acceptList(blockStatement.declarativeItems)
-          acceptList(blockStatement.statementList)
+          acceptList(blockStatement.concurrentStatements)
         case _ =>
       }
     }
