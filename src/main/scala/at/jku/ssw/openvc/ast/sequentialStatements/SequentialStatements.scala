@@ -45,6 +45,7 @@ final case class ProcedureCallStatement(label: Option[Identifier], procedureName
 object CaseStatement {
   final class When(val choices: Choices, val statements: Seq[SequentialStatement])
 }
+
 final case class CaseStatement(position: Position, label: Option[Identifier], expression: Expression, alternatives: Seq[CaseStatement.When]) extends SequentialStatement
 
 object IfStatement {

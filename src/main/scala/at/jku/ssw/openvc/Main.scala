@@ -12,23 +12,27 @@ object Main {
         override def accept(dir: File, name: String): Boolean = (name.endsWith(".vhd") || name.endsWith(".vhdl")) && !name.endsWith("in.vhd")
       }
       val configuration = parseCommandLineArguments(arguments)
-      /*
-                  val file = arguments(0)
-                  def toLines(sourceFile: String) = scala.io.Source.fromFile(sourceFile).getLines().toIndexedSeq
-                  val result = VHDLNameChecker.checkFile(configuration, file)
-                  val lines = toLines(file)
-                  printResultTo(result, new PrintWriter(System.out), Some(lines))
 
-            //printResultToHTML(result, lines, "output.html")
-      */
+      val file = arguments(0)
+      def toLines(sourceFile: String) = scala.io.Source.fromFile(sourceFile).getLines().toIndexedSeq
+      val result = VHDLNameChecker.checkFile(configuration, file)
+      val lines = toLines(file)
+      printResultTo(result, new PrintWriter(System.out), Some(lines))
+      //printResultToHTML(result, lines, "output.html")
+      
+      /*
+      val files = listFiles(new File("""C:\Users\christian\Desktop\grlib-gpl-1.0.22-b4095\"""), filter, true)
+      println("start")
       for (i <- 0 to 10) {
         val start = System.currentTimeMillis
-        listFiles(new File("""C:\Users\christian\Desktop\grlib-gpl-1.0.22-b4095\"""), filter, true).map { file =>
+        files.map {
+          file =>
           //println(file.getAbsolutePath)
-          ASTBuilder.fromFile(file.getAbsolutePath)
+            ASTBuilder.fromFile(file.getAbsolutePath)
         }
         println("time:" + (System.currentTimeMillis - start))
       }
+      */
     } catch {
       case e: Exception => e.printStackTrace
     }
@@ -42,9 +46,10 @@ object Main {
     def printMessages(prefix: String, messages: Seq[CheckerMessage]): Unit = {
       for (msg <- messages) {
         writer.println(prefix + sourceFile + ": line:" + msg.position.line + " col:" + msg.position.charPosition + " " + msg.message)
-        sourceLinesOption.foreach { sourceLines =>
-          writer.println(sourceLines(msg.position.line - 1).toLowerCase)
-          writer.println((" " * (msg.position.charPosition - 1)) + "^")
+        sourceLinesOption.foreach {
+          sourceLines =>
+            writer.println(sourceLines(msg.position.line - 1).toLowerCase)
+            writer.println((" " * (msg.position.charPosition - 1)) + "^")
         }
       }
     }
@@ -63,14 +68,14 @@ object Main {
     val (before, after) = sourceString.splitAt(pos - 1)
     val (identifier, rest) = after.splitAt(after.findIndexOf(_.isWhitespace))
     <p>
-      { before }<font color="red">
-                  { identifier }
-                </font>{ rest }
+      {before}<font color="red">
+      {identifier}
+    </font>{rest}
     </p>
   }
 
   def printResultToHTML(result: CheckResult, sourceLines: IndexedSeq[String], file: String): Unit = {
-    import org.fusesource.scalate.{ TemplateSource, TemplateEngine }
+    import org.fusesource.scalate.{TemplateSource, TemplateEngine}
     val engine = new TemplateEngine
 
     val template = Option(this.getClass.getResource("/templates/Output.scaml")).getOrElse(new File(".\\src\\main\\resources\\templates\\Output.scaml").toURI.toURL)
@@ -108,6 +113,7 @@ object Main {
   }
 
 }
+
 /*
          ____________                           ___
         /  _________/\                         /  /\
@@ -118,7 +124,7 @@ object Main {
    _________/  / //  /_/___   /  /__/  / //  / //  /__/  / /
   /___________/ //________/\ /________/ //__/ //________/ /
   \___________\/ \________\/ \________\/ \__\/ \________\/
-  
+
             ______________________________________________________________
          | / ____________    ____________________   ___    __________  /\
         _|/ /  _________/\  /_/_/_/_/_/_/_/_/_/_/  /  /\  /_/_/_/_/_/ / /
@@ -131,7 +137,7 @@ object Main {
  | /  \___________\/ \________\/ \________\/ \__\/ \________\/ / /
  |/___________________________________________________________/ /
   \___________________________________________________________\/
-  
+
                                                     ___
                                                   /  /\
 MyClass      _________   _________   _________   /  / /_________
@@ -141,8 +147,8 @@ MyClass      _________   _________   _________   /  / /_________
    ___   ______/  / //  /_/___   /  /__/  / //  / //  /__/  / /
   /__/\ /________/ //________/\ /________/ //__/ //________/ /
   \__\/ \________\/ \________\/ \________\/ \__\/ \________\/
-  
-  
+
+
          ________  __________________________________________________
       / ____  /\  __________________________________________________
      /_______/  \  __________________________________________________
@@ -155,8 +161,8 @@ MyClass      _________   _________   _________   /  / /_________
    \_______\  /  \______ /  / //  / /      /  ___   / //  / //  ___   / /
    / ____  / / _________/  / //  /_/___   /  /__/  / //  / //  /__/  / /
   /_______/ / /___________/ //________/\ /________/ //__/ //________/ /
-  \_______\/  \___________\/ \________\/ \________\/ \__\/ \________\/ 
+  \_______\/  \___________\/ \________\/ \________\/ \__\/ \________\/
     ________________________________________________________________
      ______________________________________________________________
       ____________________________________________________________
-      */ 
+      */

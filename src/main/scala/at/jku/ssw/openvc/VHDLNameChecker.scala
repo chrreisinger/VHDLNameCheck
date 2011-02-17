@@ -9,6 +9,7 @@ final class CheckerMessage(val position: Position, val message: String) {
 }
 
 object ASTBuilder {
+
   import java.io.{InputStream, FileInputStream, ByteArrayInputStream}
 
   def fromInputStream(inputStream: InputStream): DesignFile = {
@@ -24,6 +25,7 @@ object ASTBuilder {
 }
 
 object VHDLNameChecker {
+
   final class Configuration(val debug: Boolean, val properties: Map[Class[_], Regex])
 
   final class CheckResult(val checkErrors: Seq[CheckerMessage], val sourceFile: String)

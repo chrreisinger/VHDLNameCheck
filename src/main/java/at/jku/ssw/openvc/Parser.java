@@ -550,14 +550,17 @@ public class Parser {
 			return StartOf(syFol);
 		}
 	}
+    public void init(){
+        la = new Token();
+		la.val = "";
+		Get();
+    }
 	
 	DesignFile  VHDL() {
 		DesignFile  designFile;
-		ListBuffer<DesignUnit> units=new ListBuffer<DesignUnit>(); 		
-		la = new Token();
-		la.val = "";		
-		Get();
-		
+		ListBuffer<DesignUnit> units=new ListBuffer<DesignUnit>();
+		init();
+
 		DesignUnit designUnit = DesignUnit();
 		units.append(designUnit); 
 		while (StartOf(1)) {

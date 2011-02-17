@@ -22,7 +22,7 @@ object generateASTExamples {
     """
     val code="a + b sll 1 <= c*d and not e "
     */
-    val code="constant PI : real := 3.14159_26535_89793_23846;"
+    val code = "constant PI : real := 3.14159_26535_89793_23846;"
     val scanner = new Scanner(new ByteArrayInputStream(code.getBytes("utf-8")))
     val parser = new Parser(scanner)
     parser.init

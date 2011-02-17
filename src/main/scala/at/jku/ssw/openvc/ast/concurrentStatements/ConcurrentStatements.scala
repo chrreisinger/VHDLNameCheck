@@ -18,18 +18,18 @@ abstract sealed class ConcurrentSignalAssignmentStatement extends ConcurrentStat
 object ConcurrentConditionalSignalAssignment {
   final class When(val waveForm: Waveform, val condition: Expression)
 }
+
 final case class ConcurrentConditionalSignalAssignment(position: Position, label: Option[Identifier], postponed: Boolean, target: Target, guarded: Boolean,
                                                        delayMechanism: Option[DelayMechanism], alternatives: Seq[ConcurrentConditionalSignalAssignment.When]) extends ConcurrentSignalAssignmentStatement
 
 object ConcurrentSelectedSignalAssignment {
   final class When(val waveForm: Waveform, val choices: Choices)
 }
-final case class ConcurrentSelectedSignalAssignment(position: Position, label: Option[Identifier], postponed: Boolean, expression: Expression, target: Target,
-                                                    guarded: Boolean, delayMechanism: Option[DelayMechanism], alternatives: Seq[ConcurrentSelectedSignalAssignment.When])
-        extends ConcurrentSignalAssignmentStatement
 
-final case class ConcurrentProcedureCallStatement(label: Option[Identifier], postponed: Boolean, procedureName: SelectedName, parameterAssociationList: Option[AssociationList])
-        extends ConcurrentStatement {
+final case class ConcurrentSelectedSignalAssignment(position: Position, label: Option[Identifier], postponed: Boolean, expression: Expression, target: Target,
+                                                    guarded: Boolean, delayMechanism: Option[DelayMechanism], alternatives: Seq[ConcurrentSelectedSignalAssignment.When]) extends ConcurrentSignalAssignmentStatement
+
+final case class ConcurrentProcedureCallStatement(label: Option[Identifier], postponed: Boolean, procedureName: SelectedName, parameterAssociationList: Option[AssociationList]) extends ConcurrentStatement {
   val position = procedureName.position
 }
 

@@ -1,15 +1,15 @@
 {
-  //C-style line comments in JSON.
+  //default regex:"^[a-z][a-zA-Z0-9]*$"
   "NameChecker": {
          //"PackageBodyDeclaration" :
          //"PackageDeclaration" :
          //"EntityDeclaration" :
          //"ArchitectureDeclaration" :
          //"ConfigurationDeclaration" :
-         "VariableDeclaration" : "blub"
-         //"ConstantDeclaration" :
-         //"SignalDeclaration" :
-         //"FileDeclaration" :
+         "VariableDeclaration" : "^var[a-z][a-zA-Z0-9]*$",
+         "ConstantDeclaration" : "^const[a-z][a-zA-Z0-9]*$",
+         "SignalDeclaration" : "^sig[a-z][a-zA-Z0-9]*$",
+         "FileDeclaration" : "^file[a-z][a-zA-Z0-9]*$"
          //"AbstractTypeDeclaration" :
          //"FunctionDefinition" :
          //"ProcedureDefinition" :

@@ -8,12 +8,12 @@ digraph {
 	None;
 	expr;
 	List;
-	Statement1;
-	Statement2;
+	statement1;
+	statement2;
 
 	WhileStatement -> None [label="label"]
 	WhileStatement -> expr [label="expression"]
 	WhileStatement -> List [label="statements"]
-	List -> Statement1
-	List -> Statement2
+	List -> statement1
+	List -> statement2
 }

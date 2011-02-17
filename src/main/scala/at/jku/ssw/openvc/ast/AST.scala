@@ -56,11 +56,13 @@ final class Signature(val parameterList: Option[Seq[SelectedName]], val returnTy
 object Aggregate {
   final case class ElementAssociation(choices: Option[Choices], expression: Expression)
 }
+
 final case class Aggregate(position: Position, elements: Seq[Aggregate.ElementAssociation])
 
 object Waveform {
   final class Element(val valueExpression: Expression, val timeExpression: Option[Expression])
 }
+
 final class Waveform(val elements: Seq[Waveform.Element]) {
   val isUnaffected = this.elements.isEmpty
 }
@@ -68,10 +70,12 @@ final class Waveform(val elements: Seq[Waveform.Element]) {
 object Choices {
   final class Choice(val rangeOrExpression: Option[Either[DiscreteRange, Expression]]) {
     def this() = this (None)
+
     // expression,discreteRange == None => OTHERS
     val isOthers = rangeOrExpression.isEmpty
   }
 }
+
 final class Choices(val elements: Seq[Choices.Choice])
 
 object AssociationList {
@@ -79,19 +83,24 @@ object AssociationList {
     def isActualPartOpen: Boolean = actualPart.isEmpty
   }
 }
+
 final class AssociationList(val elements: Seq[AssociationList.Element])
 
 object Name {
   abstract sealed class Part extends Locatable
+
   final case class SelectedPart(identifier: Identifier) extends Part {
     val position = identifier.position
   }
+
   final case class SlicePart(range: DiscreteRange) extends Part {
     val position = range.position
   }
+
   final case class AttributePart(signature: Option[Signature], identifier: Identifier, expression: Option[Expression]) extends Part {
     val position = identifier.position
   }
+
   final case class AssociationListPart(position: Position, associationList: AssociationList) extends Part
 }
 
@@ -105,12 +114,14 @@ final case class Name(identifier: Identifier, parts: Seq[Name.Part]) extends Loc
 }
 
 object InterfaceList {
+
   abstract sealed class AbstractInterfaceElement {
     val identifierList: Seq[Identifier]
     val expression: Option[Expression]
     val interfaceMode: Option[InterfaceMode]
     val subType: SubTypeIndication
   }
+
   final case class InterfaceConstantDeclaration(identifierList: Seq[Identifier], subType: SubTypeIndication, expression: Option[Expression]) extends AbstractInterfaceElement {
     val interfaceMode = Some(InterfaceMode.IN)
   }
@@ -125,6 +136,7 @@ object InterfaceList {
   }
 
 }
+
 final class InterfaceList(val elements: Seq[InterfaceList.AbstractInterfaceElement])
 
 final class BlockConfigurationSpecification(val nameOrLabel: Either[SelectedName, (Identifier, Option[Either[DiscreteRange, Expression]])]) //SelectedName,(label,blockConfigureIndex)

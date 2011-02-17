@@ -16,6 +16,7 @@ object NameChecker {
 
     def acceptNode(node: ASTNode): Unit = {
       def acceptList[T <: ASTNode](list: Seq[T]): Unit = list.foreach(acceptNode)
+
       def check(identifier: Identifier, clazz: Option[Class[_]] = None): Unit = {
         val regex = configuration.properties(clazz.getOrElse(node.getClass))
         regex.findFirstMatchIn(identifier.text) match {
@@ -23,20 +24,13 @@ object NameChecker {
           case _ =>
         }
       }
+
       def checkList(identifierList: Seq[Identifier]): Unit = identifierList.foreach(check(_, None))
 
       def checkInterfaceList(interfaceListOption: Option[InterfaceList]): Unit =
         for (interfaceList <- interfaceListOption) {
-          import InterfaceList._
           for (element <- interfaceList.elements) {
-            for (identifier <- element.identifierList) {
-              element match {
-                case variableDeclaration: InterfaceVariableDeclaration => check(identifier, classOf[InterfaceVariableDeclaration])
-                case signalDeclaration: InterfaceSignalDeclaration => check(identifier, classOf[InterfaceSignalDeclaration])
-                case fileDeclaration: InterfaceFileDeclaration => check(identifier, classOf[InterfaceFileDeclaration])
-                case constantDeclaration: InterfaceConstantDeclaration => check(identifier, classOf[InterfaceConstantDeclaration])
-              }
-            }
+            for (identifier <- element.identifierList) check(identifier)
           }
         }
 
