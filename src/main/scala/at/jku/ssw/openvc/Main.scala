@@ -41,7 +41,7 @@ object Main {
   def printResultTo(result: CheckResult, writer: PrintWriter, sourceLinesOption: Option[IndexedSeq[String]]): Unit = {
     import result._
     if (!checkErrors.isEmpty) {
-      writer.println(" check errors:" + checkErrors.size)
+      writer.println("check errors:" + checkErrors.size)
     }
     def printMessages(prefix: String, messages: Seq[CheckerMessage]): Unit = {
       for (msg <- messages) {

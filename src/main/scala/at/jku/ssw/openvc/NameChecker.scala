@@ -15,7 +15,7 @@ object NameChecker {
     implicit def toOption(clazz: Class[_]): Option[Class[_]] = Option(clazz)
 
     def acceptNode(node: ASTNode): Unit = {
-      def acceptList[T <: ASTNode](list: Seq[T]): Unit = list.foreach(acceptNode)
+      def acceptList[T <: ASTNode](list: Seq[T]) = list.foreach(acceptNode)
 
       def check(identifier: Identifier, clazz: Option[Class[_]] = None): Unit = {
         val regex = configuration.properties(clazz.getOrElse(node.getClass))
@@ -25,9 +25,9 @@ object NameChecker {
         }
       }
 
-      def checkList(identifierList: Seq[Identifier]): Unit = identifierList.foreach(check(_, None))
+      def checkList(identifiers: Seq[Identifier]) = identifiers.foreach(check(_, None))
 
-      def checkInterfaceList(interfaceListOption: Option[InterfaceList]): Unit =
+      def checkInterfaceList(interfaceListOption: Option[InterfaceList]) =
         for (interfaceList <- interfaceListOption) {
           for (element <- interfaceList.elements) {
             for (identifier <- element.identifierList) check(identifier)

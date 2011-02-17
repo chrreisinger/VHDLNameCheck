@@ -14,7 +14,18 @@ class Project(info: ProjectInfo) extends DefaultProject(info) with Eclipsify wit
 
   override val mainResources = super.mainResources +++ "NOTICE.txt" +++ "LICENSE.txt" +++ (path("licenses") * "*")
 
-  override val proguardInJars = super.proguardInJars.filter(!_.asFile.getName.contains("scalatest")) +++ Path.fromFile(scalaLibraryJar)
+  override val mainClass = Some("at.jku.ssw.openvc.Main")
+
+  override val proguardInJars = super.proguardInJars.filter {
+    pathFinder =>
+      val name = pathFinder.asFile.getName
+      !(name.contains("scalatest") || name.contains("sources") || name.contains("javadoc"))
+  } +++ scalaLibraryPath
+
+  override def makeInJarFilter(file: String) = file match {
+    case "scala-library.jar" => "!META-INF/**" + ",!library.properties"
+    case _ => "!META-INF/**"
+  }
 
   //override val minJarName = artifactBaseName + ".min.jar"
 
@@ -24,6 +35,6 @@ class Project(info: ProjectInfo) extends DefaultProject(info) with Eclipsify wit
 
   val proguardKeepRuntime = """-keep public class at.jku.ssw.openvs.*"""
 
-  override val proguardOptions = List(proguardKeepMain, proguardKeepRuntime, "-dontskipnonpubliclibraryclasses", "-dontskipnonpubliclibraryclassmembers",
-    "-printconfiguration", "-whyareyoukeeping class org.antlr.runtime.CommonTree")
+  override val proguardOptions = List(proguardKeepMain, proguardKeepRuntime, "-dontnote", "-dontskipnonpubliclibraryclasses",
+    "-dontskipnonpubliclibraryclassmembers", "-printconfiguration", "-keep class org.codehaus.jackson** { *; }")
 }
