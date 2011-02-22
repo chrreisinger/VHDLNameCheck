@@ -353,7 +353,7 @@ CHARACTERS
   	specialCharacter = '#' + '&' + '\'' + '(' + ')' + '*' + '+' + ',' + '-'
   		+ '.' + '/' + ':' + ';' + '<' + '=' + '>' + '[' + ']' + '_' + '|'.
 
-  	spcaeCharacter = ' ' + '\u00a0'. //space, non-breaking space
+  	spaceCharacter = ' ' + '\u00a0'. //space, non-breaking space
 
   	otherSpecialCharacter =  '!' + '$' + '%' + '@' + '?' + '^' + '`' + '{' + '}' + '~'
 		+ '\u00a1'..'\u00bf' + '\u00d7' + '\u00f7'.//  � - �, � - �
@@ -364,7 +364,7 @@ CHARACTERS
   		upperCaseLetter
   		+ digit
   		+ specialCharacter
-  		+ spcaeCharacter
+  		+ spaceCharacter
   		+ lowerCaseLetter
   		+ otherSpecialCharacter
   		.
@@ -390,16 +390,16 @@ TOKENS
 
 	integerLiteral = digit { ['_'] digit } ['e' [ '+' | '-' ] digit { ['_'] digit }].
 
-	realLiteral = digit { ['_'] digit }  '.' digit { ['_'] digit }  ['e' [ '+' | '-' ] digit { ['_'] digit }] .
+	realLiteral = digit { ['_'] digit } '.' digit { ['_'] digit }  ['e' [ '+' | '-' ] digit { ['_'] digit }] .
 
 	//string literals can't contain a single quotation mark
 	stringLiteral = "\"" { "\"\"" | "\\" | graphicCharacter } "\"".
 
 	bitStringLiteral = baseSpecifier '\"' [extendedDigit { ['_'] extendedDigit }] '\"'.
 
-	apostrophe = "'" CONTEXT ((letter|"(") notApostrophe).
+	apostrophe = "'" CONTEXT (( letter | "(" ) notApostrophe).
 
-	characterLiteral = "'" ("\"" | "\\" | graphicCharacter ) "'".
+	characterLiteral = "'" ("\"" | "\\" | graphicCharacter) "'".
 
   	abs="abs".
 	access="access".
@@ -423,7 +423,7 @@ TOKENS
 	disconnect="disconnect".
 	downto="downto".
 	else="else".
-	ELSIF="elsif".
+	elsif="elsif".
 	end="end".
 	entity="entity".
 	exit="exit".
@@ -551,8 +551,8 @@ DesignUnit<out DesignUnit designUnit> =
         ListBuffer<UseClause> useClauses=new ListBuffer<UseClause>();
     .)
     {
-    LibraryClause<.out Seq<Identifier> identifierList.> (.libraries.appendAll(identifierList);.)
-    | UseClause<out UseClause useClause> (.useClauses.append(useClause);.)
+        LibraryClause<.out Seq<Identifier> identifierList.> (.libraries.appendAll(identifierList);.)
+        | UseClause<out UseClause useClause> (.useClauses.append(useClause);.)
     } (.Position pos=toPosition(la);.)
     LibraryUnit<out LibraryUnit libraryUnit>
     (.designUnit=new DesignUnit(pos,libraries.toList(),useClauses.toList(),toOption(libraryUnit));.)
@@ -579,7 +579,7 @@ GenericClause<out InterfaceList genericList> =
 
 GenericInterfaceList<out InterfaceList list> =
     (. ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>(); .)
-    InterfaceConstantDeclaration<out InterfaceList.InterfaceConstantDeclaration declaration> (.elements.append(declaration);.) { semicolon InterfaceConstantDeclaration<out declaration> (.elements.append(declaration); .)}
+    InterfaceConstantDeclaration<out InterfaceList.InterfaceConstantDeclaration declaration>(.elements.append(declaration);.) { semicolon InterfaceConstantDeclaration<out declaration> (.elements.append(declaration); .)}
     (. list=new InterfaceList(elements.toList());.)
     .
 
@@ -589,7 +589,7 @@ PortClause<out InterfaceList portList> =
 
 PortInterfaceList<out InterfaceList list> =
 	(. ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>(); .)
-    InterfaceSignalDeclarationProcedure<out InterfaceList.InterfaceSignalDeclaration declaration> (.elements.append(declaration); .) { semicolon InterfaceSignalDeclarationProcedure<out declaration> (.elements.append(declaration);.)}
+    InterfaceSignalDeclarationProcedure<out InterfaceList.InterfaceSignalDeclaration declaration>(.elements.append(declaration); .) { semicolon InterfaceSignalDeclarationProcedure<out declaration> (.elements.append(declaration);.)}
     (.list=new InterfaceList(elements.toList());.)
     .
 
@@ -695,7 +695,7 @@ BlockConfiguration<out BlockConfiguration blockConfig> =
         ListBuffer<Object> configurations=new ListBuffer<Object>();
     .)
     for BlockSpecification<out BlockConfigurationSpecification blockSpec>
-    { UseClause<out UseClause useClause> (.useClauses.append(useClause);.) }
+    { UseClause<out UseClause useClause> (.useClauses.append(useClause);.)}
     {
         IF(isComponentConfigurationInBlockConfiguration()) ComponentConfiguration<out ComponentConfiguration componentConfiguration> (.configurations.append(componentConfiguration);.)
         | BlockConfiguration<out BlockConfiguration blockConfiguration> (.configurations.append(blockConfiguration);.)
@@ -716,7 +716,7 @@ ComponentConfiguration<out ComponentConfiguration componentConfig> =
 PackageDeclaration<out PackageDeclaration packageDecl> =
     (. ListBuffer<DeclarativeItem> declarativeItems=new ListBuffer<DeclarativeItem>(); .)
     package Identifier<out Identifier identifier> is
-        { PackageDeclarativeItem<out DeclarativeItem item> (.declarativeItems.append(item);.) }
+        { PackageDeclarativeItem<out DeclarativeItem item> (.declarativeItems.append(item);.)}
     end [package] [UnusedIdentifier] semicolon
     (.packageDecl=new PackageDeclaration(identifier,declarativeItems.toList());.)
     .
@@ -941,7 +941,7 @@ EntityNameList<out Either<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier> 
        list=null;
     .)
     (
-    EntityDesignator<out designator> (.elements.append(designator); .) { comma EntityDesignator<out designator> (.elements.append(designator);.)}
+    EntityDesignator<out designator>(.elements.append(designator); .) { comma EntityDesignator<out designator> (.elements.append(designator);.)}
     (.list=new Left<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>(elements.toList());.)
     | others (.list=new Right<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>(toIdentifier(t));.)
     | all (.list=new Right<Seq<Tuple2<Identifier,Option<Signature>>>,Identifier>(toIdentifier(t));.)
@@ -1022,7 +1022,7 @@ GroupTemplateDeclaration<out GroupTemplateDeclaration groupTemplateDecl> =
         Position pos=toPosition(la);
         ListBuffer<GroupTemplateDeclaration.Element> elements=new ListBuffer<GroupTemplateDeclaration.Element>();
     .)
-    group Identifier<out Identifier identifier> is lparen EntityClassEntry<out GroupTemplateDeclaration.Element entry> (.elements.append(entry);.) { comma EntityClassEntry<out entry> (.elements.append(entry);.)}  rparen semicolon
+    group Identifier<out Identifier identifier> is lparen EntityClassEntry<out GroupTemplateDeclaration.Element entry>(.elements.append(entry);.) { comma EntityClassEntry<out entry> (.elements.append(entry);.)} rparen semicolon
     (.groupTemplateDecl=new GroupTemplateDeclaration(pos,identifier,elements.toList());.)
     .
 
@@ -1045,7 +1045,7 @@ GroupConstituentList<out Seq<Either<Name,Identifier>> list> =
         ListBuffer<Either<Name,Identifier>> elements=new ListBuffer<Either<Name,Identifier>>();
         Either<Name,Identifier> element=null;
     .)
-    GroupConstituent<out element> (.elements.append(element); .) { comma GroupConstituent<out element> (.elements.append(element);.)}
+    GroupConstituent<out element>(.elements.append(element); .) { comma GroupConstituent<out element> (.elements.append(element);.)}
     (.list=elements.toList();.)
     .
 
@@ -1099,7 +1099,7 @@ ArrayTypeDefinition<out AbstractArrayTypeDefinition arrayTypeDef,Identifier id,P
         SelectedName type=null;
     .)
     array (
-    IF(isIndexSubtypeDefinition()) lparen IndexSubtypeDefinition<out type> (.unConstraintList.append(type);.) { comma IndexSubtypeDefinition<out type> (.unConstraintList.append(type);.)} rparen of SubtypeIndication<out subType>
+    IF(isIndexSubtypeDefinition()) lparen IndexSubtypeDefinition<out type>(.unConstraintList.append(type);.) { comma IndexSubtypeDefinition<out type> (.unConstraintList.append(type);.)} rparen of SubtypeIndication<out subType>
     | IndexConstraint<out ranges> of SubtypeIndication<out subType>
     )
     (.
@@ -1205,14 +1205,14 @@ IndexConstraint<out Seq<DiscreteRange> ranges> =
         ListBuffer<DiscreteRange> list=new ListBuffer<DiscreteRange>();
         DiscreteRange discreteRange=null;
     .)
-    lparen DiscreteRange<out discreteRange> (.list.append(discreteRange);.) { comma  DiscreteRange<out discreteRange> (.list.append(discreteRange);.)} rparen
+    lparen DiscreteRange<out discreteRange>(.list.append(discreteRange);.) { comma  DiscreteRange<out discreteRange> (.list.append(discreteRange);.)} rparen
     (.ranges = list.toList();.)
     .
 
 Range<out Range range> =
     (.range=null;.)
     (
-    IF(isNotNameInRange()) SimpleExpression<out Expression from> Direction<out Direction rangeDirection>  SimpleExpression<out Expression to> (.range =new Range(from,rangeDirection,to);.)
+    IF(isNotNameInRange()) SimpleExpression<out Expression from> Direction<out Direction rangeDirection> SimpleExpression<out Expression to> (.range =new Range(from,rangeDirection,to);.)
     | Name<out Name name> (.range =new Range(null,null,null,toOption(name));.)
     )
     .
@@ -1358,13 +1358,13 @@ ProcessDeclarativeItem <out DeclarativeItem item> =
 
 ConcurrentProcedureCallStatement<out ConcurrentProcedureCallStatement procedureCallStmt, Identifier label,boolean postponed> =
     (.AssociationList paramterList=null;.)
-    SelectedName<out SelectedName procedure_name> [lparen AssociationList<out paramterList>  rparen] semicolon
+    SelectedName<out SelectedName procedure_name> [lparen AssociationList<out paramterList> rparen] semicolon
     (.procedureCallStmt=new ConcurrentProcedureCallStatement(toOption(label),postponed,procedure_name,toOption(paramterList));.)
     .
 
 ConcurrentAssertionStatement<out ConcurrentAssertionStatement assertStmt, Identifier label,boolean postponed> =
     (.Position pos=toPosition(la);Expression report_expression=null,severity_expression=null;.)
-    assert Condition<out Expression expr>  [report Expression<out report_expression>] [severity Expression<out severity_expression>] semicolon
+    assert Condition<out Expression expr> [report Expression<out report_expression>] [severity Expression<out severity_expression>] semicolon
     (.assertStmt=new ConcurrentAssertionStatement(pos,toOption(label),postponed,expr,toOption(report_expression),toOption(severity_expression));.)
     .
 
@@ -1382,7 +1382,7 @@ ConditionalSignalAssignment<out ConcurrentConditionalSignalAssignment signalAssi
         boolean guarded=false;
         DelayMechanism delay=null;
     .)
-    Target<out Target target> leq (.Position pos=toPosition(t);.) [guarded(.guarded=true;.)] [DelayMechanism<out delay>]
+    Target<out Target target> leq (.Position pos=toPosition(t);.)[guarded(.guarded=true;.)] [DelayMechanism<out delay>]
         ConditionalWaveforms<elements>
         semicolon
     (.signalAssignment=new ConcurrentConditionalSignalAssignment(pos,toOption(label),postponed,target,guarded,toOption(delay),elements.toList());.)
@@ -1524,7 +1524,7 @@ SignalOrVariableAssignmentStatement<out SequentialStatement statement,Identifier
     .
 
 VariableAssignmentStatement<out VariableAssignmentStatement varAssignStmt,Identifier label,Target target> =
-    varAssign (.Position pos=toPosition(t);.) Expression<out Expression expr> semicolon
+    varAssign(.Position pos=toPosition(t);.) Expression<out Expression expr> semicolon
     (.varAssignStmt=new SimpleVariableAssignmentStatement(pos,toOption(label),target,expr);.)
     .
 
@@ -1576,10 +1576,8 @@ IfStatement<out IfStatement ifStmt, Identifier label> =
     .)
     if Condition<out Expression if_condition> then
         SequentialStatementList<out sequentialStatements> (.ifList.append(new IfStatement.IfThenPart(if_condition,sequentialStatements));.)
-    {ELSIF Condition<out Expression elsif_condition> then
-         SequentialStatementList<out sequentialStatements>
-         (.ifList.append(new IfStatement.IfThenPart(elsif_condition,sequentialStatements));.)
-    }
+    {elsif Condition<out Expression elsif_condition> then
+         SequentialStatementList<out sequentialStatements>(.ifList.append(new IfStatement.IfThenPart(elsif_condition,sequentialStatements));.)}
     [else
         SequentialStatementList<out else_sequential_statement>]
     end if [UnusedIdentifier] semicolon
@@ -1594,7 +1592,7 @@ CaseStatement<out CaseStatement caseStmt,Identifier label> =
     case Expression<out Expression expr> is
         when Choices<out Choices choices> arrow SequentialStatementList<.out Seq<SequentialStatement> sequentialStatements.> (.alternatives.append(new CaseStatement.When(choices,sequentialStatements));.)
         { when Choices<out choices> arrow SequentialStatementList<.out sequentialStatements.> (.alternatives.append(new CaseStatement.When(choices,sequentialStatements));.)}
-    end case  [UnusedIdentifier] semicolon
+    end case [UnusedIdentifier] semicolon
     (.caseStmt=new CaseStatement(pos,toOption(label),expr,alternatives.toList());.)
     .
 
@@ -1679,7 +1677,7 @@ ParameterInterfaceListFunction<out InterfaceList list> =
         ListBuffer<InterfaceList.AbstractInterfaceElement> elements=new ListBuffer<InterfaceList.AbstractInterfaceElement>();
         InterfaceList.AbstractInterfaceElement element=null;
     .)
-    InterfaceElementFunction<out element> (.elements.append(element);.) { semicolon InterfaceElementFunction<out element> (.elements.append(element);.)}
+    InterfaceElementFunction<out element>(.elements.append(element);.) { semicolon InterfaceElementFunction<out element> (.elements.append(element);.)}
     (.list=new InterfaceList(elements.toList());.)
     .
 
@@ -1733,7 +1731,7 @@ AssociationList<out AssociationList list> =
         ListBuffer<AssociationList.Element> elements=new ListBuffer<AssociationList.Element>();
         AssociationList.Element element=null;
     .)
-    AssociationElement<out element> (.elements.append(element);.) { comma AssociationElement<out element> (.elements.append(element);.)}
+    AssociationElement<out element>(.elements.append(element);.) { comma AssociationElement<out element> (.elements.append(element);.)}
     (.list=new AssociationList(elements.toList());.)
     .
 
@@ -1779,7 +1777,7 @@ LogicalOperator<out Tuple2<Position,Operators.Logical> op> =
 Relation<out Expression rel> =
 	(.Tuple2<Position,Operators.Relation> op=null;.)
     ShiftExpression<out rel>
-    [RelationalOperator<out op> ShiftExpression<out Expression right> (.rel=new Relation(op._1,rel,op._2,right);.)]
+    [RelationalOperator<out op> ShiftExpression<out Expression right>(.rel=new Relation(op._1,rel,op._2,right);.)]
     .
 
 RelationalOperator<out Tuple2<Position,Operators.Relation> op> =
@@ -1802,7 +1800,7 @@ RelationalOperator<out Tuple2<Position,Operators.Relation> op> =
 ShiftExpression<out Expression shiftExpr> =
 	(.Tuple2<Position,Operators.Shift> op=null;.)
     SimpleExpression<out shiftExpr>
-    [ShiftOperator<out op> SimpleExpression<out Expression right> (.shiftExpr=new ShiftExpression(op._1,shiftExpr,op._2,right);.)]
+    [ShiftOperator<out op> SimpleExpression<out Expression right>(.shiftExpr=new ShiftExpression(op._1,shiftExpr,op._2,right);.)]
     .
 
 ShiftOperator<out Tuple2<Position,Operators.Shift> op> =
@@ -1876,7 +1874,7 @@ Term<out Expression term> =
 Factor<out Expression factor> =
 	(.factor=null;.)
 	(
-	Primary<out factor> [doublestar (.Position pos=toPosition(t);.) Primary<out Expression right> (.factor = new Factor(pos,factor,Operators.Factor.POW,toOption(right));.)]
+	Primary<out factor> [doublestar(.Position pos=toPosition(t);.) Primary<out Expression right>(.factor = new Factor(pos,factor,Operators.Factor.POW,toOption(right));.)]
 	| abs (.Position pos=toPosition(t);.) Primary<out Expression left> (.factor = new Factor(pos,left,Operators.Factor.ABS);.)
 	| not (.Position pos=toPosition(t);.) Primary<out Expression left> (.factor = new Factor(pos,left,Operators.Factor.NOT);.)
 	)
@@ -1913,7 +1911,7 @@ QualifiedExpression<out QualifiedExpression expr,SelectedName typeName> =
 
 SelectedNameList<out Seq<SelectedName> list> =
     (.ListBuffer<SelectedName> tmpList=new ListBuffer<SelectedName>();.)
-    SelectedName<out SelectedName name> (.tmpList.append(name);.) { comma SelectedName<out name> (.tmpList.append(name);.)}
+    SelectedName<out SelectedName name>(.tmpList.append(name);.) { comma SelectedName<out name> (.tmpList.append(name);.)}
     (.list=tmpList.toList();.)
     .
 
@@ -1925,7 +1923,7 @@ SelectedName<out SelectedName name> =
 
 NameList<out Seq<Name> list> =
     (.ListBuffer<Name> tmpList=new ListBuffer<Name>();.)
-    Name<out Name name> (.tmpList.append(name);.) { comma Name<out name> (.tmpList.append(name);.)}
+    Name<out Name name>(.tmpList.append(name);.) { comma Name<out name> (.tmpList.append(name);.)}
     (.list=tmpList.toList();.)
     .
 
@@ -1964,7 +1962,7 @@ NameSelectedPart<out at.jku.ssw.openvc.ast.Name.SelectedPart part> =
     .
 
 NameAssociationListPart<out at.jku.ssw.openvc.ast.Name.AssociationListPart part> =
-    lparen (.Position pos=toPosition(t);.) AssociationList<out AssociationList list> rparen (.part=new Name.AssociationListPart(pos,list);.)
+    lparen(.Position pos=toPosition(t);.) AssociationList<out AssociationList list> rparen (.part=new Name.AssociationListPart(pos,list);.)
     .
 
 NameSlicePart<out at.jku.ssw.openvc.ast.Name.SlicePart part> =
@@ -1973,7 +1971,7 @@ NameSlicePart<out at.jku.ssw.openvc.ast.Name.SlicePart part> =
 
 NameAttributePart<out at.jku.ssw.openvc.ast.Name.AttributePart part> =
     (.Signature signature=null;Identifier identifier=null;Expression expr=null;.)
-    [Signature<out signature>] apostrophe (Identifier<out identifier> | range (.identifier=toIdentifier(t);.)) [lparen Expression<out expr> rparen]
+    [Signature<out signature>] apostrophe (Identifier<out identifier> | range(.identifier=toIdentifier(t);.)) [lparen Expression<out expr> rparen]
     (.part=new Name.AttributePart(toOption(signature),identifier,toOption(expr));.)
     .
 
@@ -2019,7 +2017,7 @@ ElementAssociation<out at.jku.ssw.openvc.ast.Aggregate.ElementAssociation elemen
 
 Aggregate<out Aggregate aggregate> =
     (. ListBuffer<Aggregate.ElementAssociation> elements=new ListBuffer<Aggregate.ElementAssociation>(); .)
-    lparen (.Position pos=toPosition(t);.) ElementAssociation<out Aggregate.ElementAssociation element>(.elements.append(element);.) { comma ElementAssociation<out element> (.elements.append(element);.)} rparen
+    lparen(.Position pos=toPosition(t);.) ElementAssociation<out Aggregate.ElementAssociation element>(.elements.append(element);.) { comma ElementAssociation<out element> (.elements.append(element);.)} rparen
     (.aggregate =new Aggregate(pos,elements.toList());.)
     .
 
@@ -2034,13 +2032,13 @@ Choice<out at.jku.ssw.openvc.ast.Choices.Choice choice> =
 
 Choices<out Choices choices> =
     (. ListBuffer<Choices.Choice> elements=new ListBuffer<Choices.Choice>(); .)
-    Choice<out Choices.Choice choice> (.elements.append(choice);.) { bar Choice<out choice> (.elements.append(choice);.)}
+    Choice<out Choices.Choice choice>(.elements.append(choice);.) { bar Choice<out choice> (.elements.append(choice);.)}
     (.choices =new Choices(elements.toList());.)
     .
 
 IdentifierList<out Seq<Identifier> list> =
     (.ListBuffer<Identifier> identifierList=new ListBuffer<Identifier>();.)
-    Identifier<out Identifier identifier> (.identifierList.append(identifier);.) { comma Identifier<out identifier> (.identifierList.append(identifier);.) }
+    Identifier<out Identifier identifier>(.identifierList.append(identifier);.) { comma Identifier<out identifier> (.identifierList.append(identifier);.)}
     (.list=identifierList.toList();.)
     .
 

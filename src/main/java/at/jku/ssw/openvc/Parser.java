@@ -47,7 +47,7 @@ public class Parser {
 	public static final int _disconnect = 29;
 	public static final int _downto = 30;
 	public static final int _else = 31;
-	public static final int _ELSIF = 32;
+	public static final int _elsif = 32;
 	public static final int _end = 33;
 	public static final int _entity = 34;
 	public static final int _exit = 35;
@@ -3791,7 +3791,7 @@ class Errors {
 			case 29: s = "disconnect expected"; break;
 			case 30: s = "downto expected"; break;
 			case 31: s = "else expected"; break;
-			case 32: s = "ELSIF expected"; break;
+			case 32: s = "elsif expected"; break;
 			case 33: s = "end expected"; break;
 			case 34: s = "entity expected"; break;
 			case 35: s = "exit expected"; break;

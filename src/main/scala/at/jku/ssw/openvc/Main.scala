@@ -19,10 +19,10 @@ object Main {
       val lines = toLines(file)
       printResultTo(result, new PrintWriter(System.out), Some(lines))
       //printResultToHTML(result, lines, "output.html")
-      
+
       /*
       val files = listFiles(new File("""C:\Users\christian\Desktop\grlib-gpl-1.0.22-b4095\"""), filter, true)
-      println("start")
+      println("start files:" + files.size)
       for (i <- 0 to 10) {
         val start = System.currentTimeMillis
         files.map {

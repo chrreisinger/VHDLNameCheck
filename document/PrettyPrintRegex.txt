@@ -1,0 +1,17 @@
+global:
+<out[\s\w\.]*>
+<.out.*\.>
+<out.*>
+<\..*\.>
+
+\(\..*?\.\)
+\(\.(.*\n){2,8}.*\.\)
+
+<elements>
+UnusedIdentifier -> Identifier
+remove imports, ListBuffer, toOption, toPosition and toIdentifier
+fix in allocator IndexConstraint and QualifiedExpression
+
+from courser after production:
+^\s*\n ->
+^\s*\.\n -> "    .\n\n"
