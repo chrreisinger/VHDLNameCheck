@@ -1,7 +1,7 @@
 package at.jku.ssw.openvc
 
 import at.jku.ssw.openvc.ast.Position
-import at.jku.ssw.openvc.ast.declarations.DesignFile
+import at.jku.ssw.openvc.ast.designUnits.DesignFile
 import util.matching.Regex
 
 final class CheckerMessage(val position: Position, val message: String) {

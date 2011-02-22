@@ -6,9 +6,11 @@ abstract sealed class Expression extends Locatable
 
 final case class Term(position: Position, left: Expression, operator: Operators.Term, right: Expression) extends Expression
 
-final case class AggregateExpression(aggregate: Aggregate) extends Expression {
-  val position = aggregate.position
+object Aggregate {
+  final case class ElementAssociation(choices: Option[Choices], expression: Expression)
 }
+
+final case class Aggregate(position: Position, elements: Seq[Aggregate.ElementAssociation]) extends Expression
 
 final case class Relation(position: Position, left: Expression, operator: Operators.Relation, right: Expression) extends Expression
 
@@ -16,18 +18,32 @@ final case class QualifiedExpression(typeName: SelectedName, expression: Express
   val position = typeName.position
 }
 
-final case class NameExpression(name: Name) extends Expression {
-  val position = name.position
+object Name {
+  abstract sealed class Part extends Locatable
+
+  final case class SelectedPart(identifier: Identifier) extends Part {
+    val position = identifier.position
+  }
+
+  final case class SlicePart(range: DiscreteRange) extends Part {
+    val position = range.position
+  }
+
+  final case class AttributePart(signature: Option[Signature], identifier: Identifier, expression: Option[Expression]) extends Part {
+    val position = identifier.position
+  }
+
+  final case class AssociationListPart(position: Position, associationList: AssociationList) extends Part
+}
+
+final case class Name(identifier: Identifier, parts: Seq[Name.Part]) extends Expression {
+  val position = identifier.position
 }
 
 final case class ShiftExpression(position: Position, left: Expression, operator: Operators.Shift, right: Expression) extends Expression
 
 final case class Factor(position: Position, left: Expression, operator: Operators.Factor, rightOption: Option[Expression] = None) extends Expression {
   def this(position: Position, left: Expression, operator: Operators.Factor) = this (position, left, operator, None)
-}
-
-final case class FunctionCallExpression(functionName: SelectedName, parameterAssociationList: Option[AssociationList]) extends Expression {
-  val position = functionName.position
 }
 
 final case class LogicalExpression(position: Position, left: Expression, operator: Operators.Logical, right: Expression) extends Expression

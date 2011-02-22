@@ -1,6 +1,7 @@
 import at.jku.ssw.openvc.ast.*;
 import at.jku.ssw.openvc.ast.concurrentStatements.*;
-import at.jku.ssw.openvc.ast.declarations.*;
+import at.jku.ssw.openvc.ast.declarativeItems.*;
+import at.jku.ssw.openvc.ast.designUnits.*;
 import at.jku.ssw.openvc.ast.expressions.*;
 import at.jku.ssw.openvc.ast.sequentialStatements.*;
 import scala.Either;
@@ -1011,7 +1012,7 @@ DisconnectionSpecification<out DisconnectionSpecification disconnectSpec> =
     (.disconnectSpec= new DisconnectionSpecification(pos,id==null?new Left<Seq<SelectedName>,Identifier>(list):new Right<Seq<SelectedName>,Identifier>(id),type,expr);.)
     .
 
-EntityClassEntry<out at.jku.ssw.openvc.ast.declarations.GroupTemplateDeclaration.Element entry> =
+EntityClassEntry<out at.jku.ssw.openvc.ast.declarativeItems.GroupTemplateDeclaration.Element entry> =
     (.boolean box=false;.)
     EntityClass<out EntityClass  entityClass> [box(.box=true;.)]
     (.entry = new GroupTemplateDeclaration.Element(entityClass,box);.)
@@ -1091,7 +1092,7 @@ IndexSubtypeDefinition<out SelectedName typeMark> =
     TypeMark<out typeMark> range box
     .
 
-ArrayTypeDefinition<out AbstractArrayTypeDefinition arrayTypeDef,Identifier id,Position pos> =
+ArrayTypeDefinition<out ArrayTypeDefinition arrayTypeDef,Identifier id,Position pos> =
     (.
         ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>();
         SubTypeIndication subType=null;
@@ -1103,8 +1104,8 @@ ArrayTypeDefinition<out AbstractArrayTypeDefinition arrayTypeDef,Identifier id,P
     | IndexConstraint<out ranges> of SubtypeIndication<out subType>
     )
     (.
-        if (unConstraintList.isEmpty()) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,ranges,subType);
-        else arrayTypeDef=new UnconstrainedArrayTypeDefinition(pos,id,unConstraintList.toList(),subType);
+        if (unConstraintList.isEmpty()) arrayTypeDef=new ArrayTypeDefinition(pos,id,new Right<Seq<SelectedName>, Seq<DiscreteRange>>(ranges),subType);
+        else arrayTypeDef=new ArrayTypeDefinition(pos,id,new Left<Seq<SelectedName>, Seq<DiscreteRange>>(unConstraintList.toList()),subType);
     .)
     .
 
@@ -1525,13 +1526,13 @@ SignalOrVariableAssignmentStatement<out SequentialStatement statement,Identifier
 
 VariableAssignmentStatement<out VariableAssignmentStatement varAssignStmt,Identifier label,Target target> =
     varAssign(.Position pos=toPosition(t);.) Expression<out Expression expr> semicolon
-    (.varAssignStmt=new SimpleVariableAssignmentStatement(pos,toOption(label),target,expr);.)
+    (.varAssignStmt=new VariableAssignmentStatement(pos,toOption(label),target,expr);.)
     .
 
 SignalAssignmentStatement<out SignalAssignmentStatement signalAssignStmt, Identifier label,Target target> =
     (.DelayMechanism delay=null;.)
     leq (.Position pos=toPosition(t);.)[DelayMechanism<out delay>] Waveform<out Waveform waveform> semicolon
-    (.signalAssignStmt=new SimpleSignalAssignmentStatement(pos,toOption(label),target,toOption(delay),waveform);.)
+    (.signalAssignStmt=new SignalAssignmentStatement(pos,toOption(label),target,toOption(delay),waveform);.)
     .
 
 DelayMechanism<out DelayMechanism mechanism> =
@@ -1884,10 +1885,10 @@ Primary<out Expression expr> =
 	(.expr=null;.)
 	(
     IF(isQualifiedExpression()) SelectedName<out SelectedName typeName> QualifiedExpression<out expr,typeName>
-    | Name<out Name name> (.expr=new NameExpression(name);.)
+    | Name<out expr>
     | Literal<out expr>
     | Allocator<out expr>
-    | Aggregate<out Aggregate aggregate> (.expr=new AggregateExpression(aggregate);.)
+    | Aggregate<out expr>
     )
     .
 
@@ -1906,7 +1907,7 @@ Allocator<out Expression newExpression> =
 
 QualifiedExpression<out QualifiedExpression expr,SelectedName typeName> =
     apostrophe Aggregate<out Aggregate aggregate>
-    (.expr=new QualifiedExpression(typeName,new AggregateExpression(aggregate));.)
+    (.expr=new QualifiedExpression(typeName,aggregate);.)
     .
 
 SelectedNameList<out Seq<SelectedName> list> =
@@ -1941,7 +1942,7 @@ NamePrefix<out Identifier identifier> =
  	)
  	.
 
-NamePart<out at.jku.ssw.openvc.ast.Name.Part part> =
+NamePart<out at.jku.ssw.openvc.ast.expressions.Name.Part part> =
     (.part=null;.)
     (
     NameSelectedPart<out part>
@@ -1951,7 +1952,7 @@ NamePart<out at.jku.ssw.openvc.ast.Name.Part part> =
     )
     .
 
-NameSelectedPart<out at.jku.ssw.openvc.ast.Name.SelectedPart part> =
+NameSelectedPart<out at.jku.ssw.openvc.ast.expressions.Name.SelectedPart part> =
     (.part=null;.)
     dot (
     Identifier<out Identifier identifier>(.part= new Name.SelectedPart(identifier);.)
@@ -1961,15 +1962,15 @@ NameSelectedPart<out at.jku.ssw.openvc.ast.Name.SelectedPart part> =
     )
     .
 
-NameAssociationListPart<out at.jku.ssw.openvc.ast.Name.AssociationListPart part> =
+NameAssociationListPart<out at.jku.ssw.openvc.ast.expressions.Name.AssociationListPart part> =
     lparen(.Position pos=toPosition(t);.) AssociationList<out AssociationList list> rparen (.part=new Name.AssociationListPart(pos,list);.)
     .
 
-NameSlicePart<out at.jku.ssw.openvc.ast.Name.SlicePart part> =
+NameSlicePart<out at.jku.ssw.openvc.ast.expressions.Name.SlicePart part> =
     lparen DiscreteRange<out DiscreteRange discreteRange> rparen  (.part=new Name.SlicePart(discreteRange);.)
     .
 
-NameAttributePart<out at.jku.ssw.openvc.ast.Name.AttributePart part> =
+NameAttributePart<out at.jku.ssw.openvc.ast.expressions.Name.AttributePart part> =
     (.Signature signature=null;Identifier identifier=null;Expression expr=null;.)
     [Signature<out signature>] apostrophe (Identifier<out identifier> | range(.identifier=toIdentifier(t);.)) [lparen Expression<out expr> rparen]
     (.part=new Name.AttributePart(toOption(signature),identifier,toOption(expr));.)
@@ -2009,7 +2010,7 @@ PhysicalLiteral<out PhysicalLiteral literal> =
     (.literal =new PhysicalLiteral(pos,text,unit_name,literalType);.)
     .
 
-ElementAssociation<out at.jku.ssw.openvc.ast.Aggregate.ElementAssociation element> =
+ElementAssociation<out at.jku.ssw.openvc.ast.expressions.Aggregate.ElementAssociation element> =
     (.Choices choices=null;.)
     [IF(isChoiceInElementAssociation()) Choices<out choices> arrow] Expression<out Expression expr>
     (.element=new Aggregate.ElementAssociation(toOption(choices),expr);.)

@@ -1,7 +1,7 @@
 package at.jku.ssw.openvc.ast
 
-import expressions.Expression
-import declarations.UseClause
+import declarativeItems.UseClause
+import expressions.{Name, Aggregate, Expression}
 
 final class Position(val line: Int, val charPosition: Int) {
   override def toString = "Position(" + line + "," + charPosition + ")"
@@ -53,12 +53,6 @@ final class SubTypeIndication(val resolutionFunction: Option[SelectedName], val 
 
 final class Signature(val parameterList: Option[Seq[SelectedName]], val returnType: Option[SelectedName])
 
-object Aggregate {
-  final case class ElementAssociation(choices: Option[Choices], expression: Expression)
-}
-
-final case class Aggregate(position: Position, elements: Seq[Aggregate.ElementAssociation])
-
 object Waveform {
   final class Element(val valueExpression: Expression, val timeExpression: Option[Expression])
 }
@@ -86,31 +80,9 @@ object AssociationList {
 
 final class AssociationList(val elements: Seq[AssociationList.Element])
 
-object Name {
-  abstract sealed class Part extends Locatable
-
-  final case class SelectedPart(identifier: Identifier) extends Part {
-    val position = identifier.position
-  }
-
-  final case class SlicePart(range: DiscreteRange) extends Part {
-    val position = range.position
-  }
-
-  final case class AttributePart(signature: Option[Signature], identifier: Identifier, expression: Option[Expression]) extends Part {
-    val position = identifier.position
-  }
-
-  final case class AssociationListPart(position: Position, associationList: AssociationList) extends Part
-}
-
 final class SelectedName(val identifiers: Seq[Identifier]) extends Locatable {
   val position = identifiers.head.position
   override val toString = identifiers.mkString(".")
-}
-
-final case class Name(identifier: Identifier, parts: Seq[Name.Part]) extends Locatable {
-  val position = identifier.position
 }
 
 object InterfaceList {

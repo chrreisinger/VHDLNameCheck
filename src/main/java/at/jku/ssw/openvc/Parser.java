@@ -2,7 +2,8 @@ package at.jku.ssw.openvc;
 
 import at.jku.ssw.openvc.ast.*;
 import at.jku.ssw.openvc.ast.concurrentStatements.*;
-import at.jku.ssw.openvc.ast.declarations.*;
+import at.jku.ssw.openvc.ast.declarativeItems.*;
+import at.jku.ssw.openvc.ast.designUnits.*;
 import at.jku.ssw.openvc.ast.expressions.*;
 import at.jku.ssw.openvc.ast.sequentialStatements.*;
 import scala.Either;
@@ -1773,8 +1774,8 @@ public class Parser {
 		return intOrFloat;
 	}
 
-	AbstractArrayTypeDefinition  ArrayTypeDefinition(Identifier id,Position pos) {
-		AbstractArrayTypeDefinition  arrayTypeDef;
+	ArrayTypeDefinition  ArrayTypeDefinition(Identifier id,Position pos) {
+		ArrayTypeDefinition  arrayTypeDef;
 		ListBuffer<SelectedName> unConstraintList=new ListBuffer<SelectedName>();
 		SubTypeIndication subType=null;
 		Seq<DiscreteRange> ranges =null;
@@ -1798,8 +1799,8 @@ public class Parser {
 			Expect(62);
 			subType = SubtypeIndication();
 		} else SynErr(156);
-		if (unConstraintList.isEmpty()) arrayTypeDef=new ConstrainedArrayTypeDefinition(pos,id,ranges,subType);
-		else arrayTypeDef=new UnconstrainedArrayTypeDefinition(pos,id,unConstraintList.toList(),subType);
+		if (unConstraintList.isEmpty()) arrayTypeDef=new ArrayTypeDefinition(pos,id,new Right<Seq<SelectedName>, Seq<DiscreteRange>>(ranges),subType);
+		else arrayTypeDef=new ArrayTypeDefinition(pos,id,new Left<Seq<SelectedName>, Seq<DiscreteRange>>(unConstraintList.toList()),subType);
 		
 		return arrayTypeDef;
 	}
@@ -2157,8 +2158,8 @@ public class Parser {
 		return list;
 	}
 
-	at.jku.ssw.openvc.ast.declarations.GroupTemplateDeclaration.Element  EntityClassEntry() {
-		at.jku.ssw.openvc.ast.declarations.GroupTemplateDeclaration.Element  entry;
+	at.jku.ssw.openvc.ast.declarativeItems.GroupTemplateDeclaration.Element  EntityClassEntry() {
+		at.jku.ssw.openvc.ast.declarativeItems.GroupTemplateDeclaration.Element  entry;
 		boolean box=false;
 		EntityClass  entityClass = EntityClass();
 		if (la.kind == 114) {
@@ -3061,7 +3062,7 @@ public class Parser {
 		}
 		Waveform waveform = Waveform();
 		Expect(115);
-		signalAssignStmt=new SimpleSignalAssignmentStatement(pos,toOption(label),target,toOption(delay),waveform);
+		signalAssignStmt=new SignalAssignmentStatement(pos,toOption(label),target,toOption(delay),waveform);
 		return signalAssignStmt;
 	}
 
@@ -3071,7 +3072,7 @@ public class Parser {
 		Position pos=toPosition(t);
 		Expression expr = Expression();
 		Expect(115);
-		varAssignStmt=new SimpleVariableAssignmentStatement(pos,toOption(label),target,expr);
+		varAssignStmt=new VariableAssignmentStatement(pos,toOption(label),target,expr);
 		return varAssignStmt;
 	}
 
@@ -3487,15 +3488,13 @@ public class Parser {
 			SelectedName typeName = SelectedName();
 			expr = QualifiedExpression(typeName);
 		} else if (la.kind == 1 || la.kind == 2 || la.kind == 6) {
-			Name name = Name();
-			expr=new NameExpression(name);
+			expr = Name();
 		} else if (StartOf(34)) {
 			expr = Literal();
 		} else if (la.kind == 57) {
 			expr = Allocator();
 		} else if (la.kind == 118) {
-			Aggregate aggregate = Aggregate();
-			expr=new AggregateExpression(aggregate);
+			expr = Aggregate();
 		} else SynErr(200);
 		return expr;
 	}
@@ -3504,7 +3503,7 @@ public class Parser {
 		QualifiedExpression  expr;
 		Expect(8);
 		Aggregate aggregate = Aggregate();
-		expr=new QualifiedExpression(typeName,new AggregateExpression(aggregate));
+		expr=new QualifiedExpression(typeName,aggregate);
 		return expr;
 	}
 
@@ -3583,8 +3582,8 @@ public class Parser {
 		return identifier;
 	}
 
-	at.jku.ssw.openvc.ast.Name.SelectedPart  NameSelectedPart() {
-		at.jku.ssw.openvc.ast.Name.SelectedPart  part;
+	at.jku.ssw.openvc.ast.expressions.Name.SelectedPart  NameSelectedPart() {
+		at.jku.ssw.openvc.ast.expressions.Name.SelectedPart  part;
 		part=null;
 		Expect(131);
 		if (la.kind == 1 || la.kind == 2) {
@@ -3603,8 +3602,8 @@ public class Parser {
 		return part;
 	}
 
-	at.jku.ssw.openvc.ast.Name.Part  NamePart() {
-		at.jku.ssw.openvc.ast.Name.Part  part;
+	at.jku.ssw.openvc.ast.expressions.Name.Part  NamePart() {
+		at.jku.ssw.openvc.ast.expressions.Name.Part  part;
 		part=null;
 		if (la.kind == 131) {
 			part = NameSelectedPart();
@@ -3618,8 +3617,8 @@ public class Parser {
 		return part;
 	}
 
-	at.jku.ssw.openvc.ast.Name.AttributePart  NameAttributePart() {
-		at.jku.ssw.openvc.ast.Name.AttributePart  part;
+	at.jku.ssw.openvc.ast.expressions.Name.AttributePart  NameAttributePart() {
+		at.jku.ssw.openvc.ast.expressions.Name.AttributePart  part;
 		Signature signature=null;Identifier identifier=null;Expression expr=null;
 		if (la.kind == 120) {
 			signature = Signature();
@@ -3640,8 +3639,8 @@ public class Parser {
 		return part;
 	}
 
-	at.jku.ssw.openvc.ast.Name.SlicePart  NameSlicePart() {
-		at.jku.ssw.openvc.ast.Name.SlicePart  part;
+	at.jku.ssw.openvc.ast.expressions.Name.SlicePart  NameSlicePart() {
+		at.jku.ssw.openvc.ast.expressions.Name.SlicePart  part;
 		Expect(118);
 		DiscreteRange discreteRange = DiscreteRange();
 		Expect(119);
@@ -3649,8 +3648,8 @@ public class Parser {
 		return part;
 	}
 
-	at.jku.ssw.openvc.ast.Name.AssociationListPart  NameAssociationListPart() {
-		at.jku.ssw.openvc.ast.Name.AssociationListPart  part;
+	at.jku.ssw.openvc.ast.expressions.Name.AssociationListPart  NameAssociationListPart() {
+		at.jku.ssw.openvc.ast.expressions.Name.AssociationListPart  part;
 		Expect(118);
 		Position pos=toPosition(t);
 		AssociationList list = AssociationList();
@@ -3659,8 +3658,8 @@ public class Parser {
 		return part;
 	}
 
-	at.jku.ssw.openvc.ast.Aggregate.ElementAssociation  ElementAssociation() {
-		at.jku.ssw.openvc.ast.Aggregate.ElementAssociation  element;
+	at.jku.ssw.openvc.ast.expressions.Aggregate.ElementAssociation  ElementAssociation() {
+		at.jku.ssw.openvc.ast.expressions.Aggregate.ElementAssociation  element;
 		Choices choices=null;
 		if (isChoiceInElementAssociation()) {
 			choices = Choices();

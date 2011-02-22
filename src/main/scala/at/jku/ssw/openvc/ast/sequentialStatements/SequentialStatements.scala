@@ -30,13 +30,9 @@ final case class WhileStatement(position: Position, label: Option[Identifier], c
 
 final case class ForStatement(position: Position, label: Option[Identifier], identifier: Identifier, discreteRange: DiscreteRange, sequentialStatements: Seq[SequentialStatement]) extends AbstractLoopStatement
 
-abstract sealed class SignalAssignmentStatement extends SequentialStatement
+final case class SignalAssignmentStatement(position: Position, label: Option[Identifier], target: Target, delayMechanism: Option[DelayMechanism], waveForm: Waveform) extends SequentialStatement
 
-final case class SimpleSignalAssignmentStatement(position: Position, label: Option[Identifier], target: Target, delayMechanism: Option[DelayMechanism], waveForm: Waveform) extends SignalAssignmentStatement
-
-abstract sealed class VariableAssignmentStatement extends SequentialStatement
-
-final case class SimpleVariableAssignmentStatement(position: Position, label: Option[Identifier], target: Target, expression: Expression) extends VariableAssignmentStatement
+final case class VariableAssignmentStatement(position: Position, label: Option[Identifier], target: Target, expression: Expression) extends SequentialStatement
 
 final case class ProcedureCallStatement(label: Option[Identifier], procedureName: SelectedName, parameterAssociationList: Option[AssociationList]) extends SequentialStatement {
   val position = procedureName.position

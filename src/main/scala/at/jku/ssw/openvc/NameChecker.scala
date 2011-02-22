@@ -1,9 +1,10 @@
 package at.jku.ssw.openvc
 
 import at.jku.ssw.openvc.ast._
-import at.jku.ssw.openvc.ast.concurrentStatements._
-import at.jku.ssw.openvc.ast.sequentialStatements._
-import at.jku.ssw.openvc.ast.declarations._
+import concurrentStatements._
+import sequentialStatements._
+import declarativeItems._
+import designUnits._
 import at.jku.ssw.openvc.VHDLNameChecker.Configuration
 
 object NameChecker {

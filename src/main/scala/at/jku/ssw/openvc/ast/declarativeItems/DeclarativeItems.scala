@@ -1,9 +1,8 @@
-package at.jku.ssw.openvc.ast.declarations
+package at.jku.ssw.openvc.ast.declarativeItems
 
 import at.jku.ssw.openvc.ast._
 import expressions._
 import sequentialStatements.SequentialStatement
-import concurrentStatements.ConcurrentStatement
 
 abstract sealed class DeclarativeItem extends ASTNode
 
@@ -47,35 +46,6 @@ final case class ProcedureDeclaration(position: Position, identifier: Identifier
   extends SubProgramDeclaration
 
 final case class UseClause(position: Position, useList: Seq[SelectedName]) extends DeclarativeItem
-
-final case class DesignFile(designUnits: Seq[DesignUnit]) extends ASTNode {
-  lazy val position = designUnits.head.position
-}
-
-final case class DesignUnit(position: Position, libraries: Seq[Identifier], useClauses: Seq[UseClause], libraryUnit: Option[LibraryUnit]) extends ASTNode
-
-abstract sealed class LibraryUnit extends ASTNode {
-  val declarativeItems: Seq[DeclarativeItem]
-  val identifier: Identifier
-  val position = identifier.position
-}
-
-final case class ConfigurationDeclaration(identifier: Identifier, declarativeItems: Seq[DeclarativeItem], entityName: SelectedName, blockConfiguration: BlockConfiguration)
-  extends LibraryUnit
-
-final case class ArchitectureDeclaration(identifier: Identifier, declarativeItems: Seq[DeclarativeItem], entityName: SelectedName,
-                                         concurrentStatements: Seq[ConcurrentStatement])
-  extends LibraryUnit
-
-final case class EntityDeclaration(identifier: Identifier, genericInterfaceList: Option[InterfaceList], portInterfaceList: Option[InterfaceList],
-                                   declarativeItems: Seq[DeclarativeItem], concurrentStatements: Seq[ConcurrentStatement])
-  extends LibraryUnit
-
-final case class PackageDeclaration(identifier: Identifier, declarativeItems: Seq[DeclarativeItem])
-  extends LibraryUnit
-
-final case class PackageBodyDeclaration(identifier: Identifier, declarativeItems: Seq[DeclarativeItem])
-  extends LibraryUnit
 
 abstract sealed class SubProgramDefinition extends DeclarativeItem {
   val parameterInterfaceList: Option[InterfaceList]
@@ -124,13 +94,7 @@ final case class PhysicalTypeDefinition(position: Position, identifier: Identifi
 
 final case class FileTypeDefinition(position: Position, identifier: Identifier, typeName: SelectedName) extends AbstractTypeDeclaration
 
-abstract sealed class AbstractArrayTypeDefinition extends AbstractTypeDeclaration {
-  val subType: SubTypeIndication
-}
-
-final case class UnconstrainedArrayTypeDefinition(position: Position, identifier: Identifier, dimensions: Seq[SelectedName], subType: SubTypeIndication) extends AbstractArrayTypeDefinition
-
-final case class ConstrainedArrayTypeDefinition(position: Position, identifier: Identifier, dimensions: Seq[DiscreteRange], subType: SubTypeIndication) extends AbstractArrayTypeDefinition
+final case class ArrayTypeDefinition(position: Position, identifier: Identifier, dimensions: Either[Seq[SelectedName], Seq[DiscreteRange]], subType: SubTypeIndication) extends AbstractTypeDeclaration
 
 final case class EnumerationTypeDefinition(position: Position, identifier: Identifier, elements: Seq[Identifier]) extends AbstractTypeDeclaration
 

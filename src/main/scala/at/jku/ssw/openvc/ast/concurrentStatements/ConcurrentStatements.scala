@@ -1,7 +1,7 @@
 package at.jku.ssw.openvc.ast.concurrentStatements
 
 import at.jku.ssw.openvc.ast._
-import declarations.DeclarativeItem
+import declarativeItems.DeclarativeItem
 import expressions._
 import sequentialStatements.SequentialStatement
 

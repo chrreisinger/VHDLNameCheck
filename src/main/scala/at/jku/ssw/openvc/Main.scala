@@ -90,8 +90,9 @@ object Main {
   def parseCommandLineArguments(arguments: Array[String]): Configuration = {
     import util.matching.Regex
     def loadConfiguration(file: String): Map[Class[_], Regex] = {
-      import _root_.at.jku.ssw.openvc.ast.declarations._
-      import _root_.at.jku.ssw.openvc.ast.InterfaceList._
+      import ast.declarativeItems._
+      import ast.designUnits._
+      import ast.InterfaceList._
       val classes = List(classOf[PackageBodyDeclaration], classOf[PackageDeclaration], classOf[EntityDeclaration], classOf[ArchitectureDeclaration], classOf[ConfigurationDeclaration],
         classOf[VariableDeclaration], classOf[ConstantDeclaration], classOf[SignalDeclaration], classOf[FileDeclaration], classOf[AbstractTypeDeclaration], classOf[FunctionDefinition],
         classOf[ProcedureDefinition], classOf[ComponentDeclaration], classOf[FunctionDeclaration], classOf[ProcedureDeclaration], classOf[SubTypeDeclaration], classOf[AttributeDeclaration], classOf[AttributeSpecification],
