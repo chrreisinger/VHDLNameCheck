@@ -212,20 +212,20 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_units && next.kind!=_semicolon);
+		}while (next.kind!=_units && next.kind!=_semicolon && next.kind!=_EOF);
 		return next.kind==_units;
 	}
 
 	//constrained array = lparen IndexSubtypeDefinition { comma IndexSubtypeDefinition } rparen of SubtypeIndication
 	//IndexSubtypeDefinition = TypeMark range box
-	//IndexConstraint = lparen DiscreteRange { comma  DiscreteRange } rparen
+	//IndexConstraint = lparen DiscreteRange { comma DiscreteRange } rparen
 	//la==lparen
 	private boolean isIndexSubtypeDefinition() {
 		scanner.ResetPeek();
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_box && next.kind!=_semicolon && next.kind!=_rparen && next.kind!=_lparen);
+		}while (next.kind!=_box && next.kind!=_semicolon && next.kind!=_rparen && next.kind!=_lparen && next.kind!=_EOF);
 		return next.kind==_box;
 	}
 	
@@ -240,7 +240,7 @@ public class Parser {
 			next = scanner.Peek();
 			if (next.kind==_lparen) count++;
 			else if (next.kind==_rparen) count--;
-		}while (next.kind!=_varAssign && next.kind!=_leq && next.kind!=_semicolon);
+		}while (next.kind!=_varAssign && next.kind!=_leq && next.kind!=_semicolon && next.kind!=_EOF);
 		return (next.kind==_varAssign || next.kind==_leq) && count==0;
 	}
 	
@@ -252,7 +252,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_leq && next.kind!=_semicolon);
+		}while (next.kind!=_leq && next.kind!=_semicolon && next.kind!=_EOF);
 		return next.kind==_leq;
 	}
 
@@ -268,7 +268,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_varAssign && next.kind!=_semicolon && next.kind!=_in);
+		}while (next.kind!=_varAssign && next.kind!=_semicolon && next.kind!=_in && next.kind!=_EOF);
 		return next.kind==_in;
 	}
 	
@@ -280,7 +280,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_varAssign && next.kind!=_semicolon && next.kind!=_in && next.kind!=_inout && next.kind!=_outToken);
+		}while (next.kind!=_varAssign && next.kind!=_semicolon && next.kind!=_in && next.kind!=_inout && next.kind!=_outToken && next.kind!=_EOF);
 		return next.kind==_inout || next.kind==_outToken;
 	}
 
@@ -299,7 +299,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_bar && next.kind!=_arrow && next.kind!=_comma && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
+		}while (next.kind!=_bar && next.kind!=_arrow && next.kind!=_comma && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto && next.kind!=_EOF);
 		return next.kind==_to || next.kind==_downto;
 	}
 	
@@ -323,7 +323,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_use && next.kind!=_for && next.kind!=_end && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
+		}while (next.kind!=_use && next.kind!=_for && next.kind!=_end && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto && next.kind!=_EOF);
 		return next.kind==_to || next.kind==_downto;
 	}
 	
@@ -372,7 +372,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_generic && next.kind!=_port && next.kind!=_semicolon);
+		}while (next.kind!=_generic && next.kind!=_port && next.kind!=_semicolon && next.kind!=_EOF);
 		return next.kind==_generic || next.kind==_port;
 	}
 
@@ -388,7 +388,7 @@ public class Parser {
 			next = scanner.Peek();
 			if (next.kind==_lparen) count++;
 			else if (next.kind==_rparen) count--;
-		}while (count!=0 && next.kind!=_bar && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
+		}while (count!=0 && next.kind!=_bar && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto && next.kind!=_EOF);
 		return (next.kind==_to || next.kind==_downto) && count<=1;
 	}
 
@@ -407,7 +407,7 @@ public class Parser {
 			if (next.kind==_lparen) count++;
 			else if (next.kind==_rparen) count--;
 			next = scanner.Peek();
-		}while (count!=0 && next.kind!=_comma && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_others);
+		}while (count!=0 && next.kind!=_comma && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_others && next.kind!=_EOF);
 		return (next.kind==_arrow || next.kind==_others) && count<=1;
 	}
 
@@ -425,7 +425,7 @@ public class Parser {
 			next = scanner.Peek();
 			if (next.kind==_lparen) count++;
 			else if (next.kind==_rparen) count--;
-		}while (count>=0 && next.kind!=_comma && next.kind!=_others && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_open);
+		}while (count>=0 && next.kind!=_comma && next.kind!=_others && next.kind!=_arrow && next.kind!=_semicolon && next.kind!=_open && next.kind!=_EOF);
 		return next.kind==_arrow && count==0;
 	}
 
@@ -436,7 +436,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_units && next.kind!=_varAssign && next.kind!=_generate && next.kind!=_loop && next.kind!=_is && next.kind!=_open && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto);
+		}while (next.kind!=_units && next.kind!=_varAssign && next.kind!=_generate && next.kind!=_loop && next.kind!=_is && next.kind!=_open && next.kind!=_semicolon && next.kind!=_to && next.kind!=_downto && next.kind!=_EOF);
 		return next.kind==_to || next.kind==_downto;
 	}
 
@@ -447,7 +447,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_range && next.kind!=_apostrophe && next.kind!=_to && next.kind!=_downto && next.kind!=_lparen && next.kind!=_semicolon);
+		}while (next.kind!=_range && next.kind!=_apostrophe && next.kind!=_to && next.kind!=_downto && next.kind!=_lparen && next.kind!=_semicolon && next.kind!=_EOF);
 		return next.kind==_range;
 	}
 
@@ -458,7 +458,7 @@ public class Parser {
 		//match SelectedName
 		do {
 			next = scanner.Peek();
-		}while (next.kind==_basicIdentifier || next.kind==_extendedIdentifier ||  next.kind==_dot);
+		}while (next.kind==_basicIdentifier || next.kind==_extendedIdentifier || next.kind==_dot && next.kind!=_EOF);
 		return next.kind==_apostrophe && scanner.Peek().kind==_lparen;
 	}
 
@@ -467,7 +467,7 @@ public class Parser {
 		Token next;
 		do {
 			next = scanner.Peek();
-		}while (next.kind!=_colon && next.kind!=_lparen &&  next.kind!=_for);
+		}while (next.kind!=_colon && next.kind!=_lparen && next.kind!=_for && next.kind!=_EOF);
 		return next.kind==_colon;
 	}
 
