@@ -7,13 +7,11 @@ final class Position(val line: Int, val charPosition: Int) {
   override def toString = "Position(" + line + "," + charPosition + ")"
 }
 
-trait Locatable {
+abstract class ASTNode {
   val position: Position
 }
 
-abstract class ASTNode extends Locatable
-
-final class Identifier(val position: Position, val text: String) extends Locatable {
+final class Identifier(val position: Position, val text: String) extends ASTNode {
   override val toString: String = this.text
 
   override def equals(other: Any): Boolean =
@@ -27,7 +25,7 @@ final class Identifier(val position: Position, val text: String) extends Locatab
 
 final class Target(val nameOrAggregate: Either[Name, Aggregate])
 
-final class Range(val fromExpression: Expression, val direction: Direction, val toExpression: Expression, val attributeNameOption: Option[Name]) extends Locatable {
+final class Range(val fromExpression: Expression, val direction: Direction, val toExpression: Expression, val attributeNameOption: Option[Name]) extends ASTNode {
   def this(fromExpression: Expression, direction: Direction, toExpression: Expression) = this (fromExpression, direction, toExpression, None)
 
   val position = attributeNameOption match {
@@ -38,14 +36,14 @@ final class Range(val fromExpression: Expression, val direction: Direction, val 
 
 final class DelayMechanism(val delayType: DelayType, val rejectExpression: Option[Expression])
 
-final class DiscreteRange(val rangeOrSubTypeIndication: Either[Range, SubTypeIndication]) extends Locatable {
+final class DiscreteRange(val rangeOrSubTypeIndication: Either[Range, SubTypeIndication]) extends ASTNode {
   val position = rangeOrSubTypeIndication match {
     case Left(range) => range.position
     case Right(subType) => subType.position
   }
 }
 
-final class SubTypeIndication(val resolutionFunction: Option[SelectedName], val typeName: SelectedName, val constraint: Option[Either[Range, Seq[DiscreteRange]]]) extends Locatable {
+final class SubTypeIndication(val resolutionFunction: Option[SelectedName], val typeName: SelectedName, val constraint: Option[Either[Range, Seq[DiscreteRange]]]) extends ASTNode {
   def this(typeName: SelectedName, constraint: Option[Either[Range, Seq[DiscreteRange]]]) = this (None, typeName, constraint)
 
   val position = resolutionFunction.getOrElse(typeName).position
@@ -80,7 +78,7 @@ object AssociationList {
 
 final class AssociationList(val elements: Seq[AssociationList.Element])
 
-final class SelectedName(val identifiers: Seq[Identifier]) extends Locatable {
+final class SelectedName(val identifiers: Seq[Identifier]) extends ASTNode {
   val position = identifiers.head.position
   override val toString = identifiers.mkString(".")
 }

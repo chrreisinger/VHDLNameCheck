@@ -2,7 +2,7 @@ package at.jku.ssw.openvc.ast.expressions
 
 import at.jku.ssw.openvc.ast._
 
-abstract sealed class Expression extends Locatable
+abstract sealed class Expression extends ASTNode
 
 final case class Term(position: Position, left: Expression, operator: Operators.Term, right: Expression) extends Expression
 
@@ -19,7 +19,7 @@ final case class QualifiedExpression(typeName: SelectedName, expression: Express
 }
 
 object Name {
-  abstract sealed class Part extends Locatable
+  abstract sealed class Part extends ASTNode
 
   final case class SelectedPart(identifier: Identifier) extends Part {
     val position = identifier.position
