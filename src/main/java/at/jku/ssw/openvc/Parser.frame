@@ -107,7 +107,6 @@ public class Parser {
 		la.val = "";		
 		Get();
 -->parseRoot
-		Expect(0);
 	}
 
 	private static final boolean[][] set = {
@@ -165,5 +164,3 @@ class FatalError extends RuntimeException {
 	public static final long serialVersionUID = 1L;
 	public FatalError(String s) { super(s); }
 }
-
-$$$

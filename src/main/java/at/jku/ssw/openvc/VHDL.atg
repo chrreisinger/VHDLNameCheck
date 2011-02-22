@@ -542,7 +542,6 @@ VHDL<out DesignFile designFile> =
     DesignUnit<out DesignUnit designUnit> (. units.append(designUnit); .) { DesignUnit<out designUnit> (. units.append(designUnit);.)}
     (.
         designFile=new DesignFile(units.toList());
-        Expect(0);
     .)
     .
 

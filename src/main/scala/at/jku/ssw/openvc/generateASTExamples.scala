@@ -25,7 +25,9 @@ object generateASTExamples {
     val code = "constant PI : real := 3.14159_26535_89793_23846;"
     val scanner = new Scanner(new ByteArrayInputStream(code.getBytes("utf-8")))
     val parser = new Parser(scanner)
-    parser.init
+    parser.la = new Token();
+		parser.la.`val` = "";
+		parser.Get();
     //println(parser.IfStatement(null))
     //println(parser.LoopStatement(null))
     //println(parser.Expression)

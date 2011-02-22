@@ -7,12 +7,13 @@ import java.util.Map;
 import java.util.HashMap;
 
 class Token {
-	int kind;    // token kind
-	int pos;     // token position in the source text (starting at 0)
-	int col;     // token column (starting at 1)
-	int line;    // token line (starting at 1)
-	String val;  // token value
-	Token next;  // ML 2005-03-11 Peek tokens are kept in linked list
+	public int kind;    // token kind
+	public int pos;     // token position in bytes in the source text (starting at 0)
+	public int charPos; // token position in characters in the source text (starting at 0)
+	public int col;     // token column (starting at 1)
+	public int line;    // token line (starting at 1)
+	public String val;  // token value
+	public Token next;  // ML 2005-03-11 Peek tokens are kept in linked list
 }
 
 //-----------------------------------------------------------------------------------
@@ -107,6 +108,8 @@ class Buffer {
 		return ch;
 	}
 
+	// beg .. begin, zero-based, inclusive, in byte
+	// end .. end, zero-based, exclusive, in byte
 	public String GetString(int beg, int end) {
 		int len = 0;
 		char[] buf = new char[end - beg];
@@ -257,11 +260,12 @@ public class Scanner {
 	Token t;           // current token
 	int ch;            // current input character
 	int pos;           // byte position of current character
+	int charPos;       // position by unicode characters starting with 0
 	int col;           // column number of current character
 	int line;          // line number of current character
 	int oldEols;       // EOLs that appeared in a comment;
 	static final StartStates start; // maps initial token character to start state
-	static final Map<String,Integer> literals;      // maps literal strings to literal kinds
+	static final Map literals;      // maps literal strings to literal kinds
 
 	Token tokens;      // list of tokens already peeked (first token is a dummy)
 	Token pt;          // current peek token
@@ -272,7 +276,7 @@ public class Scanner {
 
 	static {
 		start = new StartStates();
-		literals = new HashMap<String,Integer>();
+		literals = new HashMap();
 		for (int i = 97; i <= 97; ++i) start.set(i, 1);
 		for (int i = 99; i <= 110; ++i) start.set(i, 1);
 		for (int i = 112; i <= 119; ++i) start.set(i, 1);
@@ -417,7 +421,7 @@ public class Scanner {
 	}
 	
 	void Init () {
-		pos = -1; line = 1; col = 0;
+		pos = -1; line = 1; col = 0; charPos = -1;
 		oldEols = 0;
 		NextCh();
 		if (ch == 0xEF) { // check optional byte order mark for UTF-8
@@ -426,7 +430,7 @@ public class Scanner {
 			if (ch1 != 0xBB || ch2 != 0xBF) {
 				throw new FatalError("Illegal byte order mark at start of file");
 			}
-			buffer = new UTF8Buffer(buffer); col = 0;
+			buffer = new UTF8Buffer(buffer); col = 0; charPos = -1;
 			NextCh();
 		}
 		pt = tokens = new Token();  // first token is a dummy
@@ -436,7 +440,8 @@ public class Scanner {
 		if (oldEols > 0) { ch = EOL; oldEols--; }
 		else {
 			pos = buffer.getPos();
-			ch = buffer.Read(); col++;
+			// buffer reads unicode chars, if UTF8 has been detected
+			ch = buffer.Read(); col++; charPos++;
 			// replace isolated '\r' by '\n' in order to make
 			// eol handling uniform across Windows, Unix and Mac
 			if (ch == '\r' && buffer.Peek() != '\n') ch = EOL;
@@ -465,7 +470,7 @@ public class Scanner {
 	
 
 	boolean Comment0() {
-		int level = 1, pos0 = pos, line0 = line, col0 = col;
+		int level = 1, pos0 = pos, line0 = line, col0 = col, charPos0 = charPos;
 		NextCh();
 		if (ch == '-') {
 			NextCh();
@@ -478,13 +483,13 @@ public class Scanner {
 				else NextCh();
 			}
 		} else {
-			buffer.setPos(pos0); NextCh(); line = line0; col = col0;
+			buffer.setPos(pos0); NextCh(); line = line0; col = col0; charPos = charPos0;
 		}
 		return false;
 	}
 
 	boolean Comment1() {
-		int level = 1, pos0 = pos, line0 = line, col0 = col;
+		int level = 1, pos0 = pos, line0 = line, col0 = col, charPos0 = charPos;
 		NextCh();
 		if (ch == '*') {
 			NextCh();
@@ -505,7 +510,7 @@ public class Scanner {
 				else NextCh();
 			}
 		} else {
-			buffer.setPos(pos0); NextCh(); line = line0; col = col0;
+			buffer.setPos(pos0); NextCh(); line = line0; col = col0; charPos = charPos0;
 		}
 		return false;
 	}
@@ -527,80 +532,93 @@ public class Scanner {
 		) NextCh();
 		if (ch == '-' && Comment0() ||ch == '/' && Comment1()) return NextToken();
 		int apx = 0;
+		int recKind = noSym;
+		int recEnd = pos;
 		t = new Token();
-		t.pos = pos; t.col = col; t.line = line; 
+		t.pos = pos; t.col = col; t.line = line; t.charPos = charPos;
 		int state = start.state(ch);
 		tlen = 0; AddCh();
 
 		loop: for (;;) {
 			switch (state) {
 				case -1: { t.kind = eofSym; break loop; } // NextCh already done 
-				case 0: { t.kind = noSym; break loop; }   // NextCh already done
+				case 0: {
+					if (recKind != noSym) {
+						tlen = recEnd - t.pos;
+						SetScannerBehindT();
+					}
+					t.kind = recKind; break loop;
+				} // NextCh already done
 				case 1:
+					recEnd = pos; recKind = 1;
 					if (ch >= '0' && ch <= '9' || ch == '_' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 1; break;}
 					else {t.kind = 1; t.val = new String(tval, 0, tlen); CheckLiteral(); return t;}
 				case 2:
 					if (ch >= ' ' && ch <= '@' || ch == '[' || ch >= ']' && ch <= '~' || ch >= 160 && ch <= 255) {AddCh(); state = 2; break;}
 					else if (ch == 92) {AddCh(); state = 60; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 3:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 4; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 4:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 4; break;}
 					else if (ch == '#') {AddCh(); state = 5; break;}
 					else if (ch == '.') {AddCh(); state = 10; break;}
 					else if (ch == '_') {AddCh(); state = 13; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 5:
+					recEnd = pos; recKind = 3;
 					if (ch == 'e') {AddCh(); state = 6; break;}
 					else {t.kind = 3; break loop;}
 				case 6:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 8; break;}
 					else if (ch == '+' || ch == '-') {AddCh(); state = 7; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 7:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 8; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 8:
+					recEnd = pos; recKind = 3;
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 8; break;}
 					else if (ch == '_') {AddCh(); state = 9; break;}
 					else {t.kind = 3; break loop;}
 				case 9:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 8; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 10:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 11; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 11:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 11; break;}
 					else if (ch == '#') {AddCh(); state = 5; break;}
 					else if (ch == '_') {AddCh(); state = 12; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 12:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 11; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 13:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 4; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 14:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 16; break;}
 					else if (ch == '+' || ch == '-') {AddCh(); state = 15; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 15:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 16; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 16:
+					recEnd = pos; recKind = 4;
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 16; break;}
 					else if (ch == '_') {AddCh(); state = 17; break;}
 					else {t.kind = 4; break loop;}
 				case 17:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 16; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 18:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 19; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 19:
+					recEnd = pos; recKind = 5;
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 19; break;}
 					else if (ch == 'e') {AddCh(); state = 20; break;}
 					else if (ch == '_') {AddCh(); state = 24; break;}
@@ -608,47 +626,47 @@ public class Scanner {
 				case 20:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 22; break;}
 					else if (ch == '+' || ch == '-') {AddCh(); state = 21; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 21:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 22; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 22:
+					recEnd = pos; recKind = 5;
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 22; break;}
 					else if (ch == '_') {AddCh(); state = 23; break;}
 					else {t.kind = 5; break loop;}
 				case 23:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 22; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 24:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 19; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 25:
 					if (ch >= ' ' && ch <= '!' || ch >= '#' && ch <= '@' || ch >= '[' && ch <= '~' || ch >= 160 && ch <= 255) {AddCh(); state = 25; break;}
 					else if (ch == '"') {AddCh(); state = 61; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 26:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 27; break;}
 					else if (ch == '"') {AddCh(); state = 29; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 27:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 27; break;}
 					else if (ch == '"') {AddCh(); state = 29; break;}
 					else if (ch == '_') {AddCh(); state = 28; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 28:
 					if (ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 27; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 29:
 					{t.kind = 7; break loop;}
 				case 30:
 					{
 					tlen -= apx;
-					buffer.setPos(t.pos); NextCh(); line = t.line; col = t.col; 
-					for (int i = 0; i < tlen; i++) NextCh();
+					SetScannerBehindT();
 					t.kind = 8; break loop;}
 				case 31:
 					if (ch == 39) {AddCh(); state = 32; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 32:
 					{t.kind = 9; break loop;}
 				case 33:
@@ -688,6 +706,7 @@ public class Scanner {
 				case 50:
 					{t.kind = 131; break loop;}
 				case 51:
+					recEnd = pos; recKind = 4;
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 51; break;}
 					else if (ch == '#') {AddCh(); state = 3; break;}
 					else if (ch == '_') {AddCh(); state = 62; break;}
@@ -695,50 +714,66 @@ public class Scanner {
 					else if (ch == '.') {AddCh(); state = 18; break;}
 					else {t.kind = 4; break loop;}
 				case 52:
+					recEnd = pos; recKind = 1;
 					if (ch >= '0' && ch <= '9' || ch == '_' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {AddCh(); state = 1; break;}
 					else if (ch == '"') {AddCh(); state = 26; break;}
 					else {t.kind = 1; t.val = new String(tval, 0, tlen); CheckLiteral(); return t;}
 				case 53:
 					if (ch == '(' || ch >= 'a' && ch <= 'z' || ch >= 192 && ch <= 214 || ch >= 216 && ch <= 246 || ch >= 248 && ch <= 255) {apx++; AddCh(); state = 63; break;}
 					else if (ch >= ' ' && ch <= 39 || ch >= ')' && ch <= '@' || ch >= '[' && ch <= '`' || ch >= '{' && ch <= '~' || ch >= 160 && ch <= 191 || ch == 215 || ch == 247) {AddCh(); state = 31; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 54:
+					recEnd = pos; recKind = 123;
 					if (ch == '*') {AddCh(); state = 33; break;}
 					else {t.kind = 123; break loop;}
 				case 55:
+					recEnd = pos; recKind = 127;
 					if (ch == '=') {AddCh(); state = 34; break;}
 					else if (ch == '>') {AddCh(); state = 39; break;}
 					else {t.kind = 127; break loop;}
 				case 56:
+					recEnd = pos; recKind = 128;
 					if (ch == '=') {AddCh(); state = 35; break;}
 					else {t.kind = 128; break loop;}
 				case 57:
+					recEnd = pos; recKind = 129;
 					if (ch == '>') {AddCh(); state = 36; break;}
 					else {t.kind = 129; break loop;}
 				case 58:
+					recEnd = pos; recKind = 124;
 					if (ch == '=') {AddCh(); state = 37; break;}
 					else {t.kind = 124; break loop;}
 				case 59:
+					recEnd = pos; recKind = 122;
 					if (ch == '=') {AddCh(); state = 38; break;}
 					else {t.kind = 122; break loop;}
 				case 60:
+					recEnd = pos; recKind = 2;
 					if (ch == 92) {AddCh(); state = 2; break;}
 					else {t.kind = 2; break loop;}
 				case 61:
+					recEnd = pos; recKind = 6;
 					if (ch == '"') {AddCh(); state = 25; break;}
 					else {t.kind = 6; break loop;}
 				case 62:
 					if (ch >= '0' && ch <= '9') {AddCh(); state = 51; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 				case 63:
 					if (ch <= '&' || ch >= '(' && ch <= 65535) {apx++; AddCh(); state = 30; break;}
 					else if (ch == 39) {apx = 0; AddCh(); state = 32; break;}
-					else {t.kind = noSym; break loop;}
+					else {state = 0; break;}
 
 			}
 		}
 		t.val = new String(tval, 0, tlen);
 		return t;
+	}
+	
+	private void SetScannerBehindT() {
+		buffer.setPos(t.pos);
+		NextCh();
+		line = t.line; col = t.col; charPos = t.charPos;
+		for (int i = 0; i < tlen; i++) NextCh();
 	}
 	
 	// get the next token (possibly a token already seen during peeking)
@@ -767,4 +802,3 @@ public class Scanner {
 	public void ResetPeek () { pt = tokens; }
 
 } // end Scanner
-
