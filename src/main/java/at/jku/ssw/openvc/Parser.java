@@ -377,10 +377,10 @@ public class Parser {
 		return next.kind==_generic || next.kind==_port;
 	}
 
-	//NameSlicePart = lparen DiscreteRange rparen.
+	//SlicePart = lparen DiscreteRange rparen.
 	//name_indexed_part = lparen Expression { comma Expression }
-	//NameAssociationListPart = lparen AssociationList rparen
-	private boolean isNameSlicePart() {
+	//AssociationListPart = lparen AssociationList rparen
+	private boolean isSlicePart() {
 		if (la.kind!=_lparen) return false;
 		scanner.ResetPeek();
 		Token next;
@@ -1240,7 +1240,7 @@ public class Parser {
 		ListBuffer<Identifier> parts=new ListBuffer<Identifier>();
 		Identifier prefix = NamePrefix();
 		while (la.kind == 131) {
-			Name.SelectedPart selectedPart = NameSelectedPart();
+			Name.SelectedPart selectedPart = SelectedPart();
 			parts.append(selectedPart.identifier());
 		}
 		parts.prepend(prefix); name =new SelectedName(parts.toList());
@@ -3582,7 +3582,7 @@ public class Parser {
 		return identifier;
 	}
 
-	at.jku.ssw.openvc.ast.expressions.Name.SelectedPart  NameSelectedPart() {
+	at.jku.ssw.openvc.ast.expressions.Name.SelectedPart  SelectedPart() {
 		at.jku.ssw.openvc.ast.expressions.Name.SelectedPart  part;
 		part=null;
 		Expect(131);
@@ -3606,18 +3606,18 @@ public class Parser {
 		at.jku.ssw.openvc.ast.expressions.Name.Part  part;
 		part=null;
 		if (la.kind == 131) {
-			part = NameSelectedPart();
+			part = SelectedPart();
 		} else if (la.kind == 8 || la.kind == 120) {
-			part = NameAttributePart();
-		} else if (isNameSlicePart()) {
-			part = NameSlicePart();
+			part = AttributePart();
+		} else if (isSlicePart()) {
+			part = SlicePart();
 		} else if (la.kind == 118) {
-			part = NameAssociationListPart();
+			part = AssociationListPart();
 		} else SynErr(205);
 		return part;
 	}
 
-	at.jku.ssw.openvc.ast.expressions.Name.AttributePart  NameAttributePart() {
+	at.jku.ssw.openvc.ast.expressions.Name.AttributePart  AttributePart() {
 		at.jku.ssw.openvc.ast.expressions.Name.AttributePart  part;
 		Signature signature=null;Identifier identifier=null;Expression expr=null;
 		if (la.kind == 120) {
@@ -3639,7 +3639,7 @@ public class Parser {
 		return part;
 	}
 
-	at.jku.ssw.openvc.ast.expressions.Name.SlicePart  NameSlicePart() {
+	at.jku.ssw.openvc.ast.expressions.Name.SlicePart  SlicePart() {
 		at.jku.ssw.openvc.ast.expressions.Name.SlicePart  part;
 		Expect(118);
 		DiscreteRange discreteRange = DiscreteRange();
@@ -3648,7 +3648,7 @@ public class Parser {
 		return part;
 	}
 
-	at.jku.ssw.openvc.ast.expressions.Name.AssociationListPart  NameAssociationListPart() {
+	at.jku.ssw.openvc.ast.expressions.Name.AssociationListPart  AssociationListPart() {
 		at.jku.ssw.openvc.ast.expressions.Name.AssociationListPart  part;
 		Expect(118);
 		Position pos=toPosition(t);
@@ -3962,9 +3962,9 @@ class Errors {
 			case 201: s = "invalid Literal"; break;
 			case 202: s = "invalid Allocator"; break;
 			case 203: s = "invalid NamePrefix"; break;
-			case 204: s = "invalid NameSelectedPart"; break;
+			case 204: s = "invalid SelectedPart"; break;
 			case 205: s = "invalid NamePart"; break;
-			case 206: s = "invalid NameAttributePart"; break;
+			case 206: s = "invalid AttributePart"; break;
 			case 207: s = "invalid Choice"; break;
 			default: s = "error " + n; break;
 		}

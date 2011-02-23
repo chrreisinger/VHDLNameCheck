@@ -195,10 +195,10 @@ COMPILER VHDL
 		return next.kind==_generic || next.kind==_port;
 	}
 
-	//NameSlicePart = lparen DiscreteRange rparen.
+	//SlicePart = lparen DiscreteRange rparen.
 	//name_indexed_part = lparen Expression { comma Expression }
-	//NameAssociationListPart = lparen AssociationList rparen
-	private boolean isNameSlicePart() {
+	//AssociationListPart = lparen AssociationList rparen
+	private boolean isSlicePart() {
 		if (la.kind!=_lparen) return false;
 		scanner.ResetPeek();
 		Token next;
@@ -1507,7 +1507,7 @@ SelectedNameList =
     .
 
 SelectedName =
-    NamePrefix { NameSelectedPart }
+    Prefix { SelectedPart }
     .
 
 NameList =
@@ -1515,10 +1515,10 @@ NameList =
     .
 
 Name =
-    NamePrefix { NamePart }
+    Prefix { NamePart }
     .
 
-NamePrefix =
+Prefix =
 	(
  	Identifier
  	| stringLiteral 
@@ -1527,14 +1527,14 @@ NamePrefix =
 
 NamePart =
     (
-    NameSelectedPart
-    | NameAttributePart
-    | IF(isNameSlicePart()) NameSlicePart
-    | NameAssociationListPart
+    SelectedPart
+    | AttributePart
+    | IF(isSlicePart()) SlicePart
+    | AssociationListPart
     )
     .
 
-NameSelectedPart =
+SelectedPart =
     dot (
     Identifier
     | characterLiteral 
@@ -1543,15 +1543,15 @@ NameSelectedPart =
     )
     .
 
-NameAssociationListPart =
+AssociationListPart =
     lparen AssociationList rparen
     .
 
-NameSlicePart =
+SlicePart =
     lparen DiscreteRange rparen  
     .
 
-NameAttributePart =
+AttributePart =
     [Signature] apostrophe (Identifier | range) [lparen Expression rparen]
     .
 

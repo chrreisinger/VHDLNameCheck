@@ -228,10 +228,10 @@ COMPILER VHDL
 		return next.kind==_generic || next.kind==_port;
 	}
 
-	//NameSlicePart = lparen DiscreteRange rparen.
+	//SlicePart = lparen DiscreteRange rparen.
 	//name_indexed_part = lparen Expression { comma Expression }
-	//NameAssociationListPart = lparen AssociationList rparen
-	private boolean isNameSlicePart() {
+	//AssociationListPart = lparen AssociationList rparen
+	private boolean isSlicePart() {
 		if (la.kind!=_lparen) return false;
 		scanner.ResetPeek();
 		Token next;
@@ -1918,7 +1918,7 @@ SelectedNameList<out Seq<SelectedName> list> =
 
 SelectedName<out SelectedName name> =
     (. ListBuffer<Identifier> parts=new ListBuffer<Identifier>();.)
-    NamePrefix<out Identifier prefix> { NameSelectedPart<out Name.SelectedPart selectedPart> (.parts.append(selectedPart.identifier());.)}
+    Prefix<out Identifier prefix> { SelectedPart<out Name.SelectedPart selectedPart> (.parts.append(selectedPart.identifier());.)}
     (.parts.prepend(prefix); name =new SelectedName(parts.toList());.)
     .
 
@@ -1930,11 +1930,11 @@ NameList<out Seq<Name> list> =
 
 Name<out Name name> =
     (.ListBuffer<Name.Part> parts=new ListBuffer<Name.Part>();.)
-    NamePrefix<out Identifier prefix> { NamePart<out Name.Part part> (.parts.append(part);.)}
+    Prefix<out Identifier prefix> { NamePart<out Name.Part part> (.parts.append(part);.)}
     (.name =new Name(prefix,parts.toList());.)
     .
 
-NamePrefix<out Identifier identifier> =
+Prefix<out Identifier identifier> =
 	(.identifier=null;.)
 	(
  	Identifier<out identifier>
@@ -1945,14 +1945,14 @@ NamePrefix<out Identifier identifier> =
 NamePart<out at.jku.ssw.openvc.ast.expressions.Name.Part part> =
     (.part=null;.)
     (
-    NameSelectedPart<out part>
-    | NameAttributePart<out part>
-    | IF(isNameSlicePart()) NameSlicePart<out part>
-    | NameAssociationListPart<out part>
+    SelectedPart<out part>
+    | AttributePart<out part>
+    | IF(isSlicePart()) SlicePart<out part>
+    | AssociationListPart<out part>
     )
     .
 
-NameSelectedPart<out at.jku.ssw.openvc.ast.expressions.Name.SelectedPart part> =
+SelectedPart<out at.jku.ssw.openvc.ast.expressions.Name.SelectedPart part> =
     (.part=null;.)
     dot (
     Identifier<out Identifier identifier>(.part= new Name.SelectedPart(identifier);.)
@@ -1962,15 +1962,15 @@ NameSelectedPart<out at.jku.ssw.openvc.ast.expressions.Name.SelectedPart part> =
     )
     .
 
-NameAssociationListPart<out at.jku.ssw.openvc.ast.expressions.Name.AssociationListPart part> =
+AssociationListPart<out at.jku.ssw.openvc.ast.expressions.Name.AssociationListPart part> =
     lparen(.Position pos=toPosition(t);.) AssociationList<out AssociationList list> rparen (.part=new Name.AssociationListPart(pos,list);.)
     .
 
-NameSlicePart<out at.jku.ssw.openvc.ast.expressions.Name.SlicePart part> =
+SlicePart<out at.jku.ssw.openvc.ast.expressions.Name.SlicePart part> =
     lparen DiscreteRange<out DiscreteRange discreteRange> rparen  (.part=new Name.SlicePart(discreteRange);.)
     .
 
-NameAttributePart<out at.jku.ssw.openvc.ast.expressions.Name.AttributePart part> =
+AttributePart<out at.jku.ssw.openvc.ast.expressions.Name.AttributePart part> =
     (.Signature signature=null;Identifier identifier=null;Expression expr=null;.)
     [Signature<out signature>] apostrophe (Identifier<out identifier> | range(.identifier=toIdentifier(t);.)) [lparen Expression<out expr> rparen]
     (.part=new Name.AttributePart(toOption(signature),identifier,toOption(expr));.)
