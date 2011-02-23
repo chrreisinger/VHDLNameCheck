@@ -21,7 +21,7 @@ object NameChecker {
       def check(identifier: Identifier, clazz: Option[Class[_]] = None): Unit = {
         val regex = configuration.properties(clazz.getOrElse(node.getClass))
         regex.findFirstMatchIn(identifier.text) match {
-          case None => checkerMessages += new CheckerMessage(identifier.position, "does not match regex: " + regex.pattern)
+          case None => checkerMessages += new CheckerMessage(identifier, regex)
           case _ =>
         }
       }

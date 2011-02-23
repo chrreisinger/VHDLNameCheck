@@ -45,11 +45,13 @@ object Main {
     }
     def printMessages(prefix: String, messages: Seq[CheckerMessage]): Unit = {
       for (msg <- messages) {
-        writer.println(prefix + sourceFile + ": line:" + msg.position.line + " col:" + msg.position.charPosition + " " + msg.message)
+        val position = msg.identifier.position
+        val stringMsg = msg.identifier.text + " " + "does not match regex: " + msg.regex.pattern
+        writer.println(prefix + sourceFile + " line " + position.line + " col " + position.charPosition + ": " + stringMsg)
         sourceLinesOption.foreach {
           sourceLines =>
-            writer.println(sourceLines(msg.position.line - 1).toLowerCase)
-            writer.println((" " * (msg.position.charPosition - 1)) + "^")
+            writer.println(sourceLines(position.line - 1).toLowerCase)
+            writer.println((" " * (position.charPosition - 1)) + "^")
         }
       }
     }

@@ -1,12 +1,10 @@
 package at.jku.ssw.openvc
 
-import at.jku.ssw.openvc.ast.Position
+import ast.Identifier
 import at.jku.ssw.openvc.ast.designUnits.DesignFile
 import util.matching.Regex
 
-final class CheckerMessage(val position: Position, val message: String) {
-  override def toString = position + " " + message
-}
+final case class CheckerMessage(identifier: Identifier, regex: Regex)
 
 object ASTBuilder {
 
